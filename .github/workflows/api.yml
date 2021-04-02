@@ -1,0 +1,60 @@
+name: API
+on: push
+jobs:
+  build:
+    env:
+      buildConfiguration: Release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Build
+      run: dotnet build -c $buildConfiguration
+    - name: Test
+      run: dotnet test -c $buildConfiguration --no-build
+    - name: Publish
+      run: dotnet publish Investager.Api/Investager.Api.csproj -c $buildConfiguration --no-self-contained -r linux-x64 -o investager-api
+    - name: Zip output
+      uses: papeloto/action-zip@v1
+      with:
+        files: investager-api/
+        dest: investager-api.zip
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: investager-api
+        path: investager-api.zip
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/release'
+    steps:
+      - name: Get artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: investager-api
+      - name: Copy artifact
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_KEY }}
+          source: "investager-api.zip"
+          target: "/home/investager"
+      - name: Upgrade
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_KEY }}
+          script: |
+            systemctl stop investager-api
+            cd /home/investager
+            zip -r "$(date +%Y%m%d_%H%M%S)_api.zip" api/
+            rm -rf api
+            unzip investager-api.zip -d api
+            rm investager-api.zip
+            systemctl start investager-api
