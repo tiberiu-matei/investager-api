@@ -68,7 +68,8 @@ namespace Investager.Infrastructure.UnitTests.Helpers
             Action act = () => _target.IsPasswordValid(password, encodedPassword);
 
             // Assert
-            act.Should().Throw<ArgumentException>();
+            act.Should().Throw<ArgumentException>()
+                .WithMessage("Invalid length of password salt or hash.");
         }
 
         [Fact]
@@ -83,7 +84,8 @@ namespace Investager.Infrastructure.UnitTests.Helpers
             Action act = () => _target.IsPasswordValid(password, encodedPassword);
 
             // Assert
-            act.Should().Throw<ArgumentException>();
+            act.Should().Throw<ArgumentException>()
+                .WithMessage("Invalid length of password salt or hash.");
         }
     }
 }

@@ -4,22 +4,25 @@ using System.Threading.Tasks;
 
 namespace Investager.Infrastructure.Persistence
 {
-    public class UnitOfWork : IUnitOfWork
+    public class CoreUnitOfWork : ICoreUnitOfWork
     {
-        private readonly InvestagerContext _context;
+        private readonly InvestagerCoreContext _context;
 
-        public UnitOfWork(InvestagerContext context)
+        public CoreUnitOfWork(InvestagerCoreContext context)
         {
             _context = context;
-            Users = new GenericRepository<User>(context);
-            RefreshTokens = new GenericRepository<RefreshToken>(context);
+            Users = new CoreGenericRepository<User>(context);
+            RefreshTokens = new CoreGenericRepository<RefreshToken>(context);
+            Assets = new CoreGenericRepository<Asset>(context);
         }
 
         public IGenericRepository<User> Users { get; }
 
         public IGenericRepository<RefreshToken> RefreshTokens { get; }
 
-        public Task SaveChanges()
+        public IGenericRepository<Asset> Assets { get; }
+
+        public Task SaveChangesAsync()
         {
             return _context.SaveChangesAsync();
         }

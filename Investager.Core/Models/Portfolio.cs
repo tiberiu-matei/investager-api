@@ -4,12 +4,12 @@ namespace Investager.Core.Models
 {
     public class Portfolio
     {
-        public uint Id { get; set; }
+        public int Id { get; set; } = default!;
 
-        public string Name { get; set; }
+        public string Name { get; set; } = default!;
 
-        public User User { get; set; }
+        public User User { get; set; } = default!;
 
-        public IEnumerable<Stock> Stocks { get; set; }
+        public ICollection<Asset> Assets { get; set; } = new List<Asset>();
     }
 }

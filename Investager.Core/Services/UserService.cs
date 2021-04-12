@@ -7,24 +7,31 @@ namespace Investager.Core.Services
 {
     public class UserService : IUserService
     {
-        private readonly IUnitOfWork _unitOfWork;
+        private readonly ICoreUnitOfWork _unitOfWork;
+        private readonly IPasswordHelper _passwordHelper;
 
-        public UserService(IUnitOfWork unitOfWork)
+        public UserService(ICoreUnitOfWork unitOfWork, IPasswordHelper passwordHelper)
         {
             _unitOfWork = unitOfWork;
+            _passwordHelper = passwordHelper;
         }
 
-        public async Task RegisterUser(RegisterUserDto registerUserDto)
+        public async Task RegisterUserAsync(RegisterUserDto registerUserDto)
         {
+            var encodedPassword = _passwordHelper.EncodePassword(registerUserDto.Password);
+
             var user = new User
             {
                 FirstName = registerUserDto.FirstName,
                 LastName = registerUserDto.LastName,
-                Email = registerUserDto.Email,
+                Email = registerUserDto.Email.ToLowerInvariant(),
+                DisplayEmail = registerUserDto.Email,
+                PasswordSalt = encodedPassword.Salt,
+                PasswordHash = encodedPassword.Hash,
             };
 
             _unitOfWork.Users.Insert(user);
-            await _unitOfWork.SaveChanges();
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }

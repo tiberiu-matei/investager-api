@@ -8,15 +8,20 @@ using System.Threading.Tasks;
 
 namespace Investager.Infrastructure.Persistence
 {
-    public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEntity : class
+    public class CoreGenericRepository<TEntity> : IGenericRepository<TEntity> where TEntity : class
     {
-        private readonly InvestagerContext _context;
+        private readonly InvestagerCoreContext _context;
         private readonly DbSet<TEntity> _dbSet;
 
-        public GenericRepository(InvestagerContext context)
+        public CoreGenericRepository(InvestagerCoreContext context)
         {
             _context = context;
             _dbSet = context.Set<TEntity>();
+        }
+
+        public async Task<IEnumerable<TEntity>> GetAll()
+        {
+            return await _dbSet.ToListAsync();
         }
 
         public async Task<TEntity> GetById(uint id)
@@ -24,7 +29,7 @@ namespace Investager.Infrastructure.Persistence
             return await _dbSet.FindAsync(id);
         }
 
-        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter = null, string includeProperties = "")
+        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>>? filter = null, string includeProperties = "")
         {
             IQueryable<TEntity> query = _dbSet;
 
@@ -38,6 +43,17 @@ namespace Investager.Infrastructure.Persistence
             {
                 query = query.Include(includeProperty);
             }
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy, int take)
+        {
+            IQueryable<TEntity> query = _dbSet;
+
+            query = query.Where(filter);
+            query = orderBy(query);
+            query = query.Take(take);
 
             return await query.ToListAsync();
         }

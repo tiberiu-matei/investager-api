@@ -4,12 +4,14 @@ using System.Threading.Tasks;
 
 namespace Investager.Core.Services
 {
-    public interface IUnitOfWork : IDisposable
+    public interface ICoreUnitOfWork : IDisposable
     {
         IGenericRepository<User> Users { get; }
 
         IGenericRepository<RefreshToken> RefreshTokens { get; }
 
-        Task SaveChanges();
+        IGenericRepository<Asset> Assets { get; }
+
+        Task SaveChangesAsync();
     }
 }

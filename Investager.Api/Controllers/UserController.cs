@@ -1,6 +1,8 @@
 ﻿using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
 {
@@ -16,11 +18,18 @@ namespace Investager.Api.Controllers
         }
 
         [HttpPost]
-        public IActionResult Register([FromBody] RegisterUserDto registerUserDto)
+        public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
-            _userService.RegisterUser(registerUserDto);
+            try
+            {
+                await _userService.RegisterUserAsync(registerUserDto);
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
     }
 }

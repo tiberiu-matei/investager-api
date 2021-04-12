@@ -4,18 +4,20 @@ namespace Investager.Core.Models
 {
     public class User
     {
-        public uint Id { get; set; }
+        public int Id { get; set; }
 
-        public string Email { get; set; }
+        public string Email { get; set; } = default!;
 
-        public string FirstName { get; set; }
+        public string DisplayEmail { get; set; } = default!;
 
-        public string LastName { get; set; }
+        public string? FirstName { get; set; }
 
-        public byte[] PasswordHash { get; set; }
+        public string? LastName { get; set; }
 
-        public byte[] PasswordSalt { get; set; }
+        public byte[] PasswordHash { get; set; } = default!;
 
-        public IEnumerable<Portfolio> Portfolio { get; set; }
+        public byte[] PasswordSalt { get; set; } = default!;
+
+        public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     }
 }

@@ -1,0 +1,80 @@
+﻿[
+    {
+        "id": "2fae5dae-f472-4e24-835f-ee396c7c56b8",
+        "class": "us_equity",
+        "exchange": "AMEX",
+        "symbol": "NES",
+        "name": "Nuverra Environmental Solutions, Inc. Common Stock",
+        "status": "active",
+        "tradable": true,
+        "marginable": true,
+        "shortable": true,
+        "easy_to_borrow": true,
+        "fractionable": false
+    },
+    {
+        "id": "e849d955-b948-4d49-becb-cca3950289ef",
+        "class": "us_equity",
+        "exchange": "NASDAQ",
+        "symbol": "NESR",
+        "name": "National Energy Services Reunited Corp. Ordinary Shares",
+        "status": "inactive",
+        "tradable": true,
+        "marginable": true,
+        "shortable": true,
+        "easy_to_borrow": true,
+        "fractionable": false
+    },
+    {
+        "id": "230eb69c-58ed-4fcf-a5e8-540db323d34c",
+        "class": "us_equity",
+        "exchange": "NYSE",
+        "symbol": "NET",
+        "name": "Cloudflare, Inc. Class A common stock, par value $0.001 per share",
+        "status": "inactive",
+        "tradable": true,
+        "marginable": true,
+        "shortable": true,
+        "easy_to_borrow": true,
+        "fractionable": true
+    },
+    {
+        "id": "1b085cff-a091-40f2-8f9d-545dce74fb11",
+        "class": "us_equity",
+        "exchange": "NASDAQ",
+        "symbol": "NETE",
+        "name": "Net Element, Inc. Common Stock",
+        "status": "active",
+        "tradable": true,
+        "marginable": true,
+        "shortable": false,
+        "easy_to_borrow": false,
+        "fractionable": false
+    },
+    {
+        "id": "d6efa374-61bf-4847-a48f-6a0770f5a137",
+        "class": "us_equity",
+        "exchange": "NYSE",
+        "symbol": "NETI",
+        "name": "Eneti Inc.",
+        "status": "active",
+        "tradable": true,
+        "marginable": true,
+        "shortable": true,
+        "easy_to_borrow": true,
+        "fractionable": false
+    },
+    {
+        "id": "41d6e866-4c4e-43ba-bf0d-94ca5b4c46e2",
+        "class": "us_equity",
+        "exchange": "ARCA",
+        "symbol": "NETL",
+        "name": "NETLease Corporate Real Estate ETF",
+        "status": "active",
+        "tradable": true,
+        "marginable": true,
+        "shortable": false,
+        "easy_to_borrow": false,
+        "fractionable": false
+    }
+]

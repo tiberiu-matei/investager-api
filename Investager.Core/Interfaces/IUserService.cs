@@ -5,6 +5,6 @@ namespace Investager.Core.Interfaces
 {
     public interface IUserService
     {
-        Task RegisterUser(RegisterUserDto registerUserDto);
+        Task RegisterUserAsync(RegisterUserDto registerUserDto);
     }
 }
