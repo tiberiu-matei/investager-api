@@ -2,12 +2,12 @@
 
 namespace Investager.Core.Models
 {
-    public class AssetPrice
+    public class TimeSeriesPoint
     {
         public DateTime Time { get; set; }
 
         public string Key { get; set; } = default!;
 
-        public float Price { get; set; }
+        public float Value { get; set; }
     }
 }

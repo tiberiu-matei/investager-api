@@ -23,8 +23,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
         private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
-        private readonly Mock<ITimeSeriesUnitOfWork> _mockTimeSeriesUnitOfWork = new Mock<ITimeSeriesUnitOfWork>();
-        private readonly Mock<IGenericRepository<AssetPrice>> _mockAssetPriceRepository = new Mock<IGenericRepository<AssetPrice>>();
+        private readonly Mock<ITimeSeriesPointRepository> _mockTimeSeriesPointRepository = new Mock<ITimeSeriesPointRepository>();
         private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
         private readonly Asset _asset;
 
@@ -52,18 +51,16 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(new List<Asset> { _asset });
 
             var mockHttpClientFactory = new Mock<IHttpClientFactory>();
-            mockHttpClientFactory.Setup(e => e.CreateClient(HttpClients.Alpaca)).Returns(httpClient);
+            mockHttpClientFactory.Setup(e => e.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
             _mockAssetRepository.Setup(e => e.GetAll()).ReturnsAsync(new List<Asset>());
 
             _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
 
-            _mockTimeSeriesUnitOfWork.Setup(e => e.AssetPrices).Returns(_mockAssetPriceRepository.Object);
-
             _target = new AlpacaService(
                 mockHttpClientFactory.Object,
                 _mockCoreUnitOfWork.Object,
-                _mockTimeSeriesUnitOfWork.Object,
+                _mockTimeSeriesPointRepository.Object,
                 _mockTimeHelper.Object);
         }
 
@@ -178,7 +175,7 @@ namespace Investager.Infrastructure.UnitTests.Services
 
             // Assert
             act.Should().Throw<HttpRequestException>();
-            _mockTimeSeriesUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Never);
+            _mockTimeSeriesPointRepository.Verify(e => e.InsertRangeAsync(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Never);
         }
 
         [Fact]
@@ -212,15 +209,15 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .Verify(
                     "SendAsync",
                     Times.Once(),
-                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T12:16:33.0000000Z&timeframe=1Day&limit=10000")),
+                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
 
-            _mockAssetRepository.Verify(e => e.Update(It.Is<Asset>(e => e.LastPriceUpdate == timeNow)), Times.Once);
+            _mockAssetRepository.Verify(e => e.Update(It.Is<Asset>(e => e.LastPriceUpdate == new DateTime(2021, 04, 11, 11, 16, 33, DateTimeKind.Utc))), Times.Once);
             _mockCoreUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
         }
 
         [Fact]
-        public async Task ExpectedDataPoints_GetInsertedToTimeSeries()
+        public async Task UpdateTimeSeriesData_ExpectedDataPoints_GetInsertedToTimeSeries()
         {
             // Arrange
             var timeNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
@@ -250,16 +247,20 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .Verify(
                     "SendAsync",
                     Times.Once(),
-                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T12:16:33.0000000Z&timeframe=1Day&limit=10000")),
+                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
 
-            _mockAssetPriceRepository.Verify(e => e.Insert(It.Is<AssetPrice>(e => e.Key == "NASDAQ:ZM" && e.Time == new DateTime(2016, 04, 12, 04, 00, 00, DateTimeKind.Utc) && e.Price == 12.81F)), Times.Once);
-            _mockAssetPriceRepository.Verify(e => e.Insert(It.Is<AssetPrice>(e => e.Key == "NASDAQ:ZM" && e.Time == new DateTime(2016, 04, 13, 04, 00, 00, DateTimeKind.Utc) && e.Price == 13.06F)), Times.Once);
-            _mockAssetPriceRepository.Verify(e => e.Insert(It.Is<AssetPrice>(e => e.Key == "NASDAQ:ZM" && e.Time == new DateTime(2016, 04, 14, 04, 00, 00, DateTimeKind.Utc) && e.Price == 13.09F)), Times.Once);
-            _mockAssetPriceRepository.Verify(e => e.Insert(It.Is<AssetPrice>(e => e.Key == "NASDAQ:ZM" && e.Time == new DateTime(2016, 04, 15, 04, 00, 00, DateTimeKind.Utc) && e.Price == 12.94F)), Times.Once);
-            _mockAssetPriceRepository.Verify(e => e.Insert(It.Is<AssetPrice>(e => e.Key == "NASDAQ:ZM" && e.Time == new DateTime(2016, 04, 18, 04, 00, 00, DateTimeKind.Utc) && e.Price == 13.25F)), Times.Once);
-            _mockAssetPriceRepository.Verify(e => e.Insert(It.IsAny<AssetPrice>()), Times.Exactly(5));
-            _mockTimeSeriesUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
+            _mockTimeSeriesPointRepository.Verify(e => e.InsertRangeAsync(It.Is<IEnumerable<TimeSeriesPoint>>(
+                e => e.Count() == 5 &&
+                e.All(e => e.Key == "NASDAQ:ZM") &&
+                e.ToList().ElementAt(0).Time == new DateTime(2016, 04, 12, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(0).Value == 12.81F &&
+                e.ToList().ElementAt(1).Time == new DateTime(2016, 04, 13, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(1).Value == 13.06F &&
+                e.ToList().ElementAt(2).Time == new DateTime(2016, 04, 14, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(2).Value == 13.09F &&
+                e.ToList().ElementAt(3).Time == new DateTime(2016, 04, 15, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(3).Value == 12.94F &&
+                e.ToList().ElementAt(4).Time == new DateTime(2016, 04, 18, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(4).Value == 13.25F)),
+                    Times.Once);
+
+            _mockTimeSeriesPointRepository.Verify(e => e.InsertRangeAsync(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Once);
         }
     }
 }

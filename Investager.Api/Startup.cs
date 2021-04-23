@@ -35,9 +35,16 @@ namespace Investager.Api
             services.AddControllers();
             services.AddInvestagerServices();
 
-            services.AddHttpClient(HttpClients.Alpaca, e =>
+            services.AddHttpClient(HttpClients.AlpacaPaper, e =>
             {
                 e.BaseAddress = new Uri("https://paper-api.alpaca.markets/");
+                e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", Configuration.GetSection("Alpaca")["KeyId"]);
+                e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", Configuration.GetSection("Alpaca")["SecretKey"]);
+            }).AddPolicyHandler(GetRetryPolicy());
+
+            services.AddHttpClient(HttpClients.AlpacaData, e =>
+            {
+                e.BaseAddress = new Uri("https://data.alpaca.markets/");
                 e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", Configuration.GetSection("Alpaca")["KeyId"]);
                 e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", Configuration.GetSection("Alpaca")["SecretKey"]);
             }).AddPolicyHandler(GetRetryPolicy());

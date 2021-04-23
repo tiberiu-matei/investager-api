@@ -13,14 +13,14 @@ namespace Investager.Api
         public static void AddInvestagerServices(this IServiceCollection services)
         {
             services.AddScoped<ICoreUnitOfWork, CoreUnitOfWork>();
-            services.AddScoped<ITimeSeriesUnitOfWork, TimeSeriesUnitOfWork>();
+            services.AddScoped<ITimeSeriesPointRepository, TimeSeriesPointRepository>();
             services.AddScoped<IUserService, UserService>();
 
             services.AddTransient<IPasswordHelper, PasswordHelper>();
             services.AddTransient<ITimeHelper, TimeHelper>();
             services.AddTransient<IDataProviderServiceFactory, DataProviderServiceFactory>();
-            services.AddTransient<IDataCollectionServiceFactory, DataCollectionServiceFactory>();
 
+            services.AddSingleton<IDataCollectionServiceFactory, DataCollectionServiceFactory>();
             services.AddSingleton(new AlpacaSettings());
         }
     }

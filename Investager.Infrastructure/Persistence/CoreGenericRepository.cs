@@ -47,6 +47,16 @@ namespace Investager.Infrastructure.Persistence
             return await query.ToListAsync();
         }
 
+        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, int take)
+        {
+            IQueryable<TEntity> query = _dbSet;
+
+            query = query.Where(filter);
+            query = query.Take(take);
+
+            return await query.ToListAsync();
+        }
+
         public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy, int take)
         {
             IQueryable<TEntity> query = _dbSet;

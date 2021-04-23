@@ -19,19 +19,19 @@ namespace Investager.Infrastructure.Migrations.InvestagerTimeSeries
                 .HasAnnotation("Relational:MaxIdentifierLength", 63)
                 .HasAnnotation("ProductVersion", "5.0.2");
 
-            modelBuilder.Entity("Investager.Core.Models.AssetPrice", b =>
+            modelBuilder.Entity("Investager.Core.Models.TimeSeriesPoint", b =>
                 {
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<float>("Price")
-                        .HasColumnType("real");
-
                     b.Property<DateTime>("Time")
                         .HasColumnType("timestamp without time zone");
 
-                    b.ToTable("AssetPrice");
+                    b.Property<float>("Value")
+                        .HasColumnType("real");
+
+                    b.ToTable("TimeSeriesPoint");
                 });
 #pragma warning restore 612, 618
         }

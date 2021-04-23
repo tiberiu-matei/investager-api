@@ -2,6 +2,8 @@
 {
     public static class HttpClients
     {
-        public const string Alpaca = "Alpaca";
+        public const string AlpacaPaper = "AlpacaPaper";
+
+        public const string AlpacaData = "AlpacaData";
     }
 }

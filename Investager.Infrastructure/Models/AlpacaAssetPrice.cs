@@ -21,6 +21,6 @@ namespace Investager.Infrastructure.Models
         public float Close { get; set; }
 
         [JsonPropertyName("v")]
-        public int Volume { get; set; }
+        public ulong Volume { get; set; }
     }
 }

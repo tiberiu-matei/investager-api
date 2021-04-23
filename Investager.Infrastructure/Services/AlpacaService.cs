@@ -17,24 +17,24 @@ namespace Investager.Infrastructure.Services
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ICoreUnitOfWork _coreUnitOfWork;
-        private readonly ITimeSeriesUnitOfWork _timeSeriesUnitOfWork;
+        private readonly ITimeSeriesPointRepository _timeSeriesPointRepository;
         private readonly ITimeHelper _timeHelper;
 
         public AlpacaService(
             IHttpClientFactory httpClientFactory,
             ICoreUnitOfWork coreUnitOfWork,
-            ITimeSeriesUnitOfWork timeSeriesUnitOfWork,
+            ITimeSeriesPointRepository timeSeriesPointRepository,
             ITimeHelper timeHelper)
         {
             _httpClientFactory = httpClientFactory;
             _coreUnitOfWork = coreUnitOfWork;
-            _timeSeriesUnitOfWork = timeSeriesUnitOfWork;
+            _timeSeriesPointRepository = timeSeriesPointRepository;
             _timeHelper = timeHelper;
         }
 
         public async Task<IEnumerable<Asset>> ScanAssetsAsync()
         {
-            var client = _httpClientFactory.CreateClient(HttpClients.Alpaca);
+            var client = _httpClientFactory.CreateClient(HttpClients.AlpacaPaper);
             var alpacaAssets = await client.GetFromJsonAsync<IEnumerable<AlpacaAsset>>("v2/assets") ?? new List<AlpacaAsset>();
             alpacaAssets = alpacaAssets.Where(e => e.Status == "active").ToList();
 
@@ -71,9 +71,15 @@ namespace Investager.Infrastructure.Services
 
         public async Task UpdateTimeSeriesDataAsync()
         {
-            Func<IQueryable<Asset>, IOrderedQueryable<Asset>> orderBy = query => query.OrderBy(e => e.LastPriceUpdate);
-            var assetsToUpdate = await _coreUnitOfWork.Assets.Find(e => e.Provider == DataProviders.Alpaca, orderBy, 1);
-            var assetToUpdate = assetsToUpdate.FirstOrDefault();
+            var assetsWithNoData = await _coreUnitOfWork.Assets.Find(e => e.Provider == DataProviders.Alpaca && e.LastPriceUpdate == null, 1);
+            var assetToUpdate = assetsWithNoData.FirstOrDefault();
+            if (assetToUpdate == null)
+            {
+                Func<IQueryable<Asset>, IOrderedQueryable<Asset>> orderBy = query => query.OrderBy(e => e.LastPriceUpdate);
+                var assetsWithData = await _coreUnitOfWork.Assets.Find(e => e.Provider == DataProviders.Alpaca, orderBy, 1);
+                assetToUpdate = assetsWithData.FirstOrDefault();
+            }
+
             if (assetToUpdate != null)
             {
                 var utcNow = _timeHelper.GetUtcNow();
@@ -86,16 +92,21 @@ namespace Investager.Infrastructure.Services
                     from = earliestAllowedTime;
                 }
 
-                var client = _httpClientFactory.CreateClient(HttpClients.Alpaca);
-                var queryString = $"start={from.Value:O}&end={utcNow:O}&timeframe=1Day&limit=10000";
+                var to = utcNow - TimeSpan.FromHours(1);
+
+                if (to < from || to - from < TimeSpan.FromDays(1))
+                {
+                    return;
+                }
+
+                var client = _httpClientFactory.CreateClient(HttpClients.AlpacaData);
+                var queryString = $"start={from.Value:O}&end={to:O}&timeframe=1Day&limit=10000";
                 var barsResponse = await client.GetFromJsonAsync<AlpacaBarsResponse>($"v2/stocks/{assetToUpdate.Symbol}/bars?{queryString}") ?? new AlpacaBarsResponse();
 
-                var assetPrices = barsResponse.Bars.Select(e => new AssetPrice { Time = e.Time, Key = $"{assetToUpdate.Exchange}:{assetToUpdate.Symbol}", Price = e.Close }).ToList();
-                assetPrices.ForEach(e => _timeSeriesUnitOfWork.AssetPrices.Insert(e));
+                var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = $"{assetToUpdate.Exchange}:{assetToUpdate.Symbol}", Value = e.Close }).ToList();
+                await _timeSeriesPointRepository.InsertRangeAsync(assetPrices);
 
-                await _timeSeriesUnitOfWork.SaveChangesAsync();
-
-                assetToUpdate.LastPriceUpdate = utcNow;
+                assetToUpdate.LastPriceUpdate = to;
                 _coreUnitOfWork.Assets.Update(assetToUpdate);
                 await _coreUnitOfWork.SaveChangesAsync();
             }

@@ -14,7 +14,6 @@ namespace Investager.Infrastructure.Persistence
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new AssetPriceConfiguration());
-            modelBuilder.ApplyConfiguration(new CurrencyExchangeRatioConfiguration());
         }
     }
 }
