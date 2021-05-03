@@ -38,15 +38,21 @@ namespace Investager.Infrastructure.Persistence
             var sqlBuilder = new StringBuilder();
             sqlBuilder.AppendLine("INSERT INTO \"TimeSeriesPoint\"(\"Time\", \"Key\", \"Value\")");
             sqlBuilder.AppendLine("VALUES");
-            foreach (var timeSeriesPoint in timeSeriesPoints)
+
+            var pointsArray = timeSeriesPoints.ToArray();
+            for (var i = 0; i < pointsArray.Length; i++)
             {
-                sqlBuilder.AppendLine($"('{timeSeriesPoint.Time:yyyy-MM-dd HH:mm:ss.ffffff}', '{timeSeriesPoint.Key}', {timeSeriesPoint.Value}),");
+                sqlBuilder.Append($"('{pointsArray[i].Time:yyyy-MM-dd HH:mm:ss.ffffff}', '{pointsArray[i].Key}', {pointsArray[i].Value})");
+
+                if (i == pointsArray.Length - 1)
+                {
+                    sqlBuilder.AppendLine(";");
+                }
+                else
+                {
+                    sqlBuilder.AppendLine(",");
+                }
             }
-
-            sqlBuilder.Remove(sqlBuilder.Length - 3, 3);
-            sqlBuilder.Append(';');
-
-            Console.WriteLine(sqlBuilder.ToString());
 
             await _context.Database.ExecuteSqlRawAsync(sqlBuilder.ToString());
         }
