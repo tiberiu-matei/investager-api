@@ -46,6 +46,8 @@ namespace Investager.Infrastructure.Persistence
             sqlBuilder.Remove(sqlBuilder.Length - 3, 3);
             sqlBuilder.Append(';');
 
+            Console.WriteLine(sqlBuilder.ToString());
+
             await _context.Database.ExecuteSqlRawAsync(sqlBuilder.ToString());
         }
     }
