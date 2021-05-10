@@ -4,9 +4,6 @@
         "InvestagerApi": {
             "commandName": "Project",
             "dotnetRunMessages": "true",
-            "launchBrowser": true,
-            "launchUrl": "api/v1/weatherforecast",
-            "applicationUrl": "http://localhost:8022",
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Development"
             }
