@@ -6,7 +6,7 @@ namespace Investager.Core.Models
     {
         public DateTime Time { get; set; }
 
-        public string Key { get; set; } = default!;
+        public string Key { get; set; }
 
         public float Value { get; set; }
     }

@@ -36,7 +36,7 @@ namespace Investager.Infrastructure.UnitTests.Helpers
             var encodedPassword = _target.EncodePassword(password);
 
             // Act
-            var passwordValid = _target.IsPasswordValid(password, encodedPassword);
+            var passwordValid = _target.IsPasswordCorrect(password, encodedPassword.Hash, encodedPassword.Salt);
 
             // Assert
             passwordValid.Should().BeTrue();
@@ -50,7 +50,7 @@ namespace Investager.Infrastructure.UnitTests.Helpers
             var encodedPassword = _target.EncodePassword(password);
 
             // Act
-            var passwordValid = _target.IsPasswordValid($"{password}1", encodedPassword);
+            var passwordValid = _target.IsPasswordCorrect($"{password}1", encodedPassword.Hash, encodedPassword.Salt);
 
             // Assert
             passwordValid.Should().BeFalse();
@@ -65,7 +65,7 @@ namespace Investager.Infrastructure.UnitTests.Helpers
             encodedPassword.Salt = new byte[10];
 
             // Act
-            Action act = () => _target.IsPasswordValid(password, encodedPassword);
+            Action act = () => _target.IsPasswordCorrect(password, encodedPassword.Hash, encodedPassword.Salt);
 
             // Assert
             act.Should().Throw<ArgumentException>()
@@ -81,7 +81,7 @@ namespace Investager.Infrastructure.UnitTests.Helpers
             encodedPassword.Hash = new byte[10];
 
             // Act
-            Action act = () => _target.IsPasswordValid(password, encodedPassword);
+            Action act = () => _target.IsPasswordCorrect(password, encodedPassword.Hash, encodedPassword.Salt);
 
             // Assert
             act.Should().Throw<ArgumentException>()

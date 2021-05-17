@@ -46,7 +46,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesDataAsync(), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(), Times.Once);
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             await Task.Delay(500);
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesDataAsync(), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(), Times.Once);
         }
 
         [Fact]
@@ -77,7 +77,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesDataAsync(), Times.Exactly(2));
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(), Times.Exactly(2));
         }
     }
 }

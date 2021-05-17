@@ -82,7 +82,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
-            var result = await _target.ScanAssetsAsync();
+            var result = await _target.ScanAssets();
 
             result.ToList().Count.Should().Be(4);
             _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NES" && e.Exchange == "AMEX")), Times.Once);
@@ -90,7 +90,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NETI" && e.Exchange == "NYSE")), Times.Once);
             _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NETL" && e.Exchange == "ARCA")), Times.Once);
             _mockAssetRepository.Verify(e => e.Insert(It.IsAny<Asset>()), Times.Exactly(4));
-            _mockCoreUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
+            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
         }
 
         [Fact]
@@ -121,11 +121,11 @@ namespace Investager.Infrastructure.UnitTests.Services
 
             _mockAssetRepository.Setup(e => e.GetAll()).ReturnsAsync(existingAssets);
 
-            var result = await _target.ScanAssetsAsync();
+            var result = await _target.ScanAssets();
 
             result.ToList().Count.Should().Be(0);
             _mockAssetRepository.Verify(e => e.Insert(It.IsAny<Asset>()), Times.Never);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Never);
+            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
         }
 
         [Fact]
@@ -145,11 +145,11 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
-            Func<Task> act = async () => await _target.ScanAssetsAsync();
+            Func<Task> act = async () => await _target.ScanAssets();
 
             act.Should().Throw<HttpRequestException>();
             _mockAssetRepository.Verify(e => e.Insert(It.IsAny<Asset>()), Times.Never);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Never);
+            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
         }
 
         [Fact]
@@ -171,11 +171,11 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            Func<Task> act = async () => await _target.UpdateTimeSeriesDataAsync();
+            Func<Task> act = async () => await _target.UpdateTimeSeriesData();
 
             // Assert
             act.Should().Throw<HttpRequestException>();
-            _mockTimeSeriesPointRepository.Verify(e => e.InsertRangeAsync(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Never);
+            _mockTimeSeriesPointRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Never);
         }
 
         [Fact]
@@ -201,7 +201,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            await _target.UpdateTimeSeriesDataAsync();
+            await _target.UpdateTimeSeriesData();
 
             // Assert
             _mockHttpMessageHandler
@@ -213,7 +213,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>());
 
             _mockAssetRepository.Verify(e => e.Update(It.Is<Asset>(e => e.LastPriceUpdate == new DateTime(2021, 04, 11, 11, 16, 33, DateTimeKind.Utc))), Times.Once);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
+            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
         }
 
         [Fact]
@@ -239,7 +239,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            await _target.UpdateTimeSeriesDataAsync();
+            await _target.UpdateTimeSeriesData();
 
             // Assert
             _mockHttpMessageHandler
@@ -250,7 +250,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
 
-            _mockTimeSeriesPointRepository.Verify(e => e.InsertRangeAsync(It.Is<IEnumerable<TimeSeriesPoint>>(
+            _mockTimeSeriesPointRepository.Verify(e => e.InsertRange(It.Is<IEnumerable<TimeSeriesPoint>>(
                 e => e.Count() == 5 &&
                 e.All(e => e.Key == "NASDAQ:ZM") &&
                 e.ToList().ElementAt(0).Time == new DateTime(2016, 04, 12, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(0).Value == 12.81F &&
@@ -260,7 +260,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 e.ToList().ElementAt(4).Time == new DateTime(2016, 04, 18, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(4).Value == 13.25F)),
                     Times.Once);
 
-            _mockTimeSeriesPointRepository.Verify(e => e.InsertRangeAsync(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Once);
+            _mockTimeSeriesPointRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Once);
         }
     }
 }

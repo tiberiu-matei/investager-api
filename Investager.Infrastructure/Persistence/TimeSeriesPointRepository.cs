@@ -18,17 +18,17 @@ namespace Investager.Infrastructure.Persistence
             _context = context;
         }
 
-        public Task<IEnumerable<TimeSeriesPoint>> GetAsync(string key, DateTime from)
+        public Task<IEnumerable<TimeSeriesPoint>> Get(string key, DateTime from)
         {
-            return GetAsync(key, from, DateTime.UtcNow);
+            return Get(key, from, DateTime.UtcNow);
         }
 
-        public Task<IEnumerable<TimeSeriesPoint>> GetAsync(string key, DateTime from, DateTime to)
+        public Task<IEnumerable<TimeSeriesPoint>> Get(string key, DateTime from, DateTime to)
         {
             throw new NotImplementedException();
         }
 
-        public async Task InsertRangeAsync(IEnumerable<TimeSeriesPoint> timeSeriesPoints)
+        public async Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints)
         {
             if (!timeSeriesPoints.Any())
             {

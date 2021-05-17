@@ -21,19 +21,19 @@ namespace Investager.Infrastructure.Helpers
             };
         }
 
-        public bool IsPasswordValid(string password, EncodedPassword encodedPassword)
+        public bool IsPasswordCorrect(string password, byte[] hash, byte[] salt)
         {
-            if (encodedPassword.Salt.Length != 128 || encodedPassword.Hash.Length != 64)
+            if (hash.Length != 64 || salt.Length != 128)
             {
                 throw new ArgumentException("Invalid length of password salt or hash.");
             }
 
-            using var hmac = new HMACSHA512(encodedPassword.Salt);
+            using var hmac = new HMACSHA512(salt);
 
             var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
             for (var i = 0; i < computedHash.Length; i++)
             {
-                if (computedHash[i] != encodedPassword.Hash[i])
+                if (computedHash[i] != hash[i])
                 {
                     return false;
                 }

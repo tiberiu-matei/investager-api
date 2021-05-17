@@ -7,17 +7,17 @@ namespace Investager.Core.Models
     {
         public int Id { get; set; }
 
-        public string Provider { get; set; } = default!;
+        public string Provider { get; set; }
 
-        public string Symbol { get; set; } = default!;
+        public string Symbol { get; set; }
 
-        public string Exchange { get; set; } = default!;
+        public string Exchange { get; set; }
 
-        public string Name { get; set; } = default!;
+        public string Name { get; set; }
 
-        public string? Industry { get; set; }
+        public string Industry { get; set; }
 
-        public string Currency { get; set; } = default!;
+        public string Currency { get; set; }
 
         public DateTime? LastPriceUpdate { get; set; }
 

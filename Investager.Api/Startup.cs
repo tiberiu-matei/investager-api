@@ -1,3 +1,4 @@
+using Investager.Core.Mapping;
 using Investager.Core.Models;
 using Investager.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
@@ -32,8 +33,10 @@ namespace Investager.Api
             services.AddDbContext<InvestagerTimeSeriesContext>(options =>
                 options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
 
+            services.AddAutoMapper(e => e.AddProfile<AutoMapperProfile>());
+
             services.AddControllers();
-            services.AddInvestagerServices();
+            services.AddInvestagerServices(Configuration);
 
             services.AddHttpClient(HttpClients.AlpacaPaper, e =>
             {

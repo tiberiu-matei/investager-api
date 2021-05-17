@@ -1,6 +1,9 @@
-﻿using Investager.Core.Services;
+﻿using AutoMapper;
+using Investager.Core.Dtos;
+using Investager.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
@@ -11,11 +14,28 @@ namespace Investager.Api.Controllers
     {
         private readonly IDataProviderServiceFactory _assetServiceFactory;
         private readonly IDataCollectionServiceFactory _dataCollectionServiceFactory;
+        private readonly ICoreUnitOfWork _coreUnitOfWork;
+        private readonly IMapper _mapper;
 
-        public AssetController(IDataProviderServiceFactory assetServiceFactory, IDataCollectionServiceFactory dataCollectionServiceFactory)
+        public AssetController(
+            IDataProviderServiceFactory assetServiceFactory,
+            IDataCollectionServiceFactory dataCollectionServiceFactory,
+            ICoreUnitOfWork coreUnitOfWork,
+            IMapper mapper)
         {
             _assetServiceFactory = assetServiceFactory;
             _dataCollectionServiceFactory = dataCollectionServiceFactory;
+            _coreUnitOfWork = coreUnitOfWork;
+            _mapper = mapper;
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var assets = await _coreUnitOfWork.Assets.GetAll();
+            var assetDtos = _mapper.Map<IEnumerable<AssetSummaryDto>>(assets);
+
+            return Ok(assetDtos);
         }
 
         [HttpPost("scan")]
@@ -24,7 +44,7 @@ namespace Investager.Api.Controllers
             try
             {
                 var assetService = _assetServiceFactory.CreateService("Alpaca");
-                await assetService.ScanAssetsAsync();
+                await assetService.ScanAssets();
 
                 return NoContent();
             }

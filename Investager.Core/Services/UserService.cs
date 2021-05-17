@@ -1,6 +1,10 @@
 ﻿using Investager.Core.Dtos;
+using Investager.Core.Exceptions;
 using Investager.Core.Interfaces;
 using Investager.Core.Models;
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Investager.Core.Services
@@ -9,14 +13,18 @@ namespace Investager.Core.Services
     {
         private readonly ICoreUnitOfWork _unitOfWork;
         private readonly IPasswordHelper _passwordHelper;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly ITimeHelper _timeHelper;
 
-        public UserService(ICoreUnitOfWork unitOfWork, IPasswordHelper passwordHelper)
+        public UserService(ICoreUnitOfWork unitOfWork, IPasswordHelper passwordHelper, IJwtTokenService jwtTokenService, ITimeHelper timeHelper)
         {
             _unitOfWork = unitOfWork;
             _passwordHelper = passwordHelper;
+            _jwtTokenService = jwtTokenService;
+            _timeHelper = timeHelper;
         }
 
-        public async Task RegisterUserAsync(RegisterUserDto registerUserDto)
+        public async Task<RegisterUserResponse> RegisterUser(RegisterUserDto registerUserDto)
         {
             var encodedPassword = _passwordHelper.EncodePassword(registerUserDto.Password);
 
@@ -31,7 +39,80 @@ namespace Investager.Core.Services
             };
 
             _unitOfWork.Users.Insert(user);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.SaveChanges();
+
+            var accessToken = _jwtTokenService.GetAccessToken(user.Id);
+            var refreshToken = _jwtTokenService.GetRefreshToken(user.Id);
+
+            await AddRefreshToken(user, refreshToken);
+
+            var response = new RegisterUserResponse
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+            };
+
+            return response;
+        }
+
+        public async Task<LoginResponse> Login(string email, string password)
+        {
+            var userResponse = await _unitOfWork.Users.Find(e => e.Email == email);
+            var user = userResponse.Single();
+
+            var passwordCorrect = _passwordHelper.IsPasswordCorrect(password, user.PasswordHash, user.PasswordSalt);
+            if (!passwordCorrect)
+            {
+                throw new InvalidPasswordException("Password invalid.");
+            }
+
+            var accessToken = _jwtTokenService.GetAccessToken(user.Id);
+            var refreshToken = _jwtTokenService.GetRefreshToken(user.Id);
+
+            await AddRefreshToken(user, refreshToken);
+
+            var response = new LoginResponse
+            {
+                FirstName = user.FirstName,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+            };
+
+            return response;
+        }
+
+        public async Task<string> RefreshToken(string refreshToken)
+        {
+            var token = DecodeToken(refreshToken);
+            var userId = Convert.ToInt32(token.Subject);
+            var userTokens = await _unitOfWork.RefreshTokens.Find(e => e.UserId == userId && e.EncodedValue == refreshToken);
+            userTokens.Single();
+
+            var accessToken = _jwtTokenService.GetAccessToken(userId);
+
+            return accessToken;
+        }
+
+        private async Task AddRefreshToken(User user, string refreshToken)
+        {
+            var refreshTokenEntity = new RefreshToken
+            {
+                EncodedValue = refreshToken,
+                CreatedAt = _timeHelper.GetUtcNow(),
+                LastUsedAt = _timeHelper.GetUtcNow(),
+                User = user,
+            };
+
+            _unitOfWork.RefreshTokens.Insert(refreshTokenEntity);
+            await _unitOfWork.SaveChanges();
+        }
+
+        private JwtSecurityToken DecodeToken(string encodedToken)
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jsonToken = handler.ReadToken(encodedToken);
+
+            return jsonToken as JwtSecurityToken;
         }
     }
 }

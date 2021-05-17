@@ -17,14 +17,44 @@ namespace Investager.Api.Controllers
             _userService = userService;
         }
 
-        [HttpPost]
+        [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
             try
             {
-                await _userService.RegisterUserAsync(registerUserDto);
+                var response = await _userService.RegisterUser(registerUserDto);
 
-                return NoContent();
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPut("login")]
+        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+        {
+            try
+            {
+                var response = await _userService.Login(loginDto.Email, loginDto.Password);
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+        [HttpPut("refreshtoken")]
+        public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+        {
+            try
+            {
+                var response = await _userService.RefreshToken(refreshToken);
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
