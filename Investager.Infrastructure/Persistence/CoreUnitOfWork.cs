@@ -22,7 +22,7 @@ namespace Investager.Infrastructure.Persistence
 
         public IGenericRepository<Asset> Assets { get; }
 
-        public Task SaveChangesAsync()
+        public Task SaveChanges()
         {
             return _context.SaveChangesAsync();
         }

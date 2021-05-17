@@ -10,7 +10,7 @@ namespace Investager.Infrastructure.Factories
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly AlpacaSettings _alpacaSettings;
 
-        private AlpacaDataCollectionService? _alpacaDataCollectionService;
+        private AlpacaDataCollectionService _alpacaDataCollectionService;
 
         public DataCollectionServiceFactory(
             IServiceScopeFactory serviceScopeFactory,

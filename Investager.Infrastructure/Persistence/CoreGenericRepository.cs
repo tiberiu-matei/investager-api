@@ -29,7 +29,7 @@ namespace Investager.Infrastructure.Persistence
             return await _dbSet.FindAsync(id);
         }
 
-        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>>? filter = null, string includeProperties = "")
+        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter = null, string includeProperties = "")
         {
             IQueryable<TEntity> query = _dbSet;
 

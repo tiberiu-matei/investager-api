@@ -6,8 +6,8 @@ namespace Investager.Core.Interfaces
 {
     public interface IDataProviderService
     {
-        public Task<IEnumerable<Asset>> ScanAssetsAsync();
+        public Task<IEnumerable<Asset>> ScanAssets();
 
-        public Task UpdateTimeSeriesDataAsync();
+        public Task UpdateTimeSeriesData();
     }
 }

@@ -32,7 +32,7 @@ namespace Investager.Infrastructure.Services
             _timeHelper = timeHelper;
         }
 
-        public async Task<IEnumerable<Asset>> ScanAssetsAsync()
+        public async Task<IEnumerable<Asset>> ScanAssets()
         {
             var client = _httpClientFactory.CreateClient(HttpClients.AlpacaPaper);
             var alpacaAssets = await client.GetFromJsonAsync<IEnumerable<AlpacaAsset>>("v2/assets") ?? new List<AlpacaAsset>();
@@ -63,13 +63,13 @@ namespace Investager.Infrastructure.Services
 
             if (addedAssets.Any())
             {
-                await _coreUnitOfWork.SaveChangesAsync();
+                await _coreUnitOfWork.SaveChanges();
             }
 
             return addedAssets;
         }
 
-        public async Task UpdateTimeSeriesDataAsync()
+        public async Task UpdateTimeSeriesData()
         {
             var assetsWithNoData = await _coreUnitOfWork.Assets.Find(e => e.Provider == DataProviders.Alpaca && e.LastPriceUpdate == null, 1);
             var assetToUpdate = assetsWithNoData.FirstOrDefault();
@@ -104,11 +104,11 @@ namespace Investager.Infrastructure.Services
                 var barsResponse = await client.GetFromJsonAsync<AlpacaBarsResponse>($"v2/stocks/{assetToUpdate.Symbol}/bars?{queryString}") ?? new AlpacaBarsResponse();
 
                 var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = $"{assetToUpdate.Exchange}:{assetToUpdate.Symbol}", Value = e.Close }).ToList();
-                await _timeSeriesPointRepository.InsertRangeAsync(assetPrices);
+                await _timeSeriesPointRepository.InsertRange(assetPrices);
 
                 assetToUpdate.LastPriceUpdate = to;
                 _coreUnitOfWork.Assets.Update(assetToUpdate);
-                await _coreUnitOfWork.SaveChangesAsync();
+                await _coreUnitOfWork.SaveChanges();
             }
         }
     }

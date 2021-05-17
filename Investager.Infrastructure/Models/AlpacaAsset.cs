@@ -2,14 +2,14 @@
 {
     public class AlpacaAsset
     {
-        public string Class { get; set; } = default!;
+        public string Class { get; set; }
 
-        public string Exchange { get; set; } = default!;
+        public string Exchange { get; set; }
 
-        public string Symbol { get; set; } = default!;
+        public string Symbol { get; set; }
 
-        public string Name { get; set; } = default!;
+        public string Name { get; set; }
 
-        public string Status { get; set; } = default!;
+        public string Status { get; set; }
     }
 }

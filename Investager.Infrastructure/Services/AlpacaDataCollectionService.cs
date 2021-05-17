@@ -34,7 +34,7 @@ namespace Investager.Infrastructure.Services
                         using var scope = _serviceScopeFactory.CreateScope();
                         var dataProviderServiceFactory = scope.ServiceProvider.GetRequiredService<IDataProviderServiceFactory>();
                         var alpacaService = dataProviderServiceFactory.CreateService(DataProviders.Alpaca);
-                        await alpacaService.UpdateTimeSeriesDataAsync();
+                        await alpacaService.UpdateTimeSeriesData();
 
                         await Task.Delay(_alpacaSettings.PeriodBetweenDataRequests);
                     }

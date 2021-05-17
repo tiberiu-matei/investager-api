@@ -33,7 +33,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
         public void Get_UntilCurrentTime_Throws()
         {
             // Act
-            Func<Task> act = async () => await _target.GetAsync("fake", new DateTime(2021, 01, 01));
+            Func<Task> act = async () => await _target.Get("fake", new DateTime(2021, 01, 01));
 
             // Assert
             act.Should().Throw<NotImplementedException>();
@@ -43,7 +43,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
         public void Get_WithTimeRange_Throws()
         {
             // Act
-            Func<Task> act = async () => await _target.GetAsync("fake", new DateTime(2021, 01, 01), new DateTime(2021, 03, 01));
+            Func<Task> act = async () => await _target.Get("fake", new DateTime(2021, 01, 01), new DateTime(2021, 03, 01));
 
             // Assert
             act.Should().Throw<NotImplementedException>();
@@ -53,7 +53,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
         public async Task InsertRange_WhenNoItems_NothingIsAdded()
         {
             // Act
-            await _target.InsertRangeAsync(new List<TimeSeriesPoint>());
+            await _target.InsertRange(new List<TimeSeriesPoint>());
 
             // Assert
             var points = await _context.Set<TimeSeriesPoint>().ToListAsync();
@@ -75,7 +75,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             };
 
             // Act
-            await _target.InsertRangeAsync(pointsToAdd);
+            await _target.InsertRange(pointsToAdd);
 
             // Assert
             var points = await _context.Set<TimeSeriesPoint>().ToListAsync();
@@ -114,8 +114,8 @@ namespace Investager.Infrastructure.UnitTests.Persistence
 
 
             // Act
-            await _target.InsertRangeAsync(listWithOnePoint);
-            await _target.InsertRangeAsync(listWithTwoPoints);
+            await _target.InsertRange(listWithOnePoint);
+            await _target.InsertRange(listWithTwoPoints);
 
             // Assert
             var points = await _context.Set<TimeSeriesPoint>().ToListAsync();

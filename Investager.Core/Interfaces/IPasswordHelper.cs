@@ -6,6 +6,6 @@ namespace Investager.Core.Interfaces
     {
         EncodedPassword EncodePassword(string password);
 
-        bool IsPasswordValid(string password, EncodedPassword encodedPassword);
+        bool IsPasswordCorrect(string password, byte[] hash, byte[] salt);
     }
 }

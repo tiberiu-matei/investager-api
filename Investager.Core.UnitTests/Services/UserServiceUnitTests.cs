@@ -1,10 +1,13 @@
 ﻿using FluentAssertions;
 using Investager.Core.Dtos;
+using Investager.Core.Exceptions;
 using Investager.Core.Interfaces;
 using Investager.Core.Models;
 using Investager.Core.Services;
 using Moq;
 using System;
+using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -13,17 +16,22 @@ namespace Investager.Core.UnitTests.Services
     public class UserServiceUnitTests
     {
         private readonly Mock<ICoreUnitOfWork> _mockUnitOfWork = new Mock<ICoreUnitOfWork>();
-        private readonly Mock<IGenericRepository<User>> _mockUserRepository = new Mock<IGenericRepository<User>>();
         private readonly Mock<IPasswordHelper> _mockPasswordHelper = new Mock<IPasswordHelper>();
+        private readonly Mock<IJwtTokenService> _mockJwtTokenService = new Mock<IJwtTokenService>();
+        private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
+
+        private readonly Mock<IGenericRepository<User>> _mockUserRepository = new Mock<IGenericRepository<User>>();
+        private readonly Mock<IGenericRepository<RefreshToken>> _mockRefreshTokenRepository = new Mock<IGenericRepository<RefreshToken>>();
 
         private readonly UserService _target;
 
         public UserServiceUnitTests()
         {
             _mockUnitOfWork.Setup(e => e.Users).Returns(_mockUserRepository.Object);
+            _mockUnitOfWork.Setup(e => e.RefreshTokens).Returns(_mockRefreshTokenRepository.Object);
             _mockPasswordHelper.Setup(e => e.EncodePassword(It.IsAny<string>())).Returns(new EncodedPassword { Salt = new byte[1], Hash = new byte[1] });
 
-            _target = new UserService(_mockUnitOfWork.Object, _mockPasswordHelper.Object);
+            _target = new UserService(_mockUnitOfWork.Object, _mockPasswordHelper.Object, _mockJwtTokenService.Object, _mockTimeHelper.Object);
         }
 
         [Fact]
@@ -39,11 +47,11 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUserAsync(registerUser);
+            await _target.RegisterUser(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.IsAny<User>()), Times.Once);
-            _mockUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Exactly(2));
         }
 
         [Fact]
@@ -66,11 +74,11 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUserAsync(registerUser);
+            await _target.RegisterUser(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.PasswordSalt == encodedPassword.Salt && u.PasswordHash == encodedPassword.Hash)), Times.Once);
-            _mockUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Exactly(2));
         }
 
         [Fact]
@@ -85,11 +93,37 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUserAsync(registerUser);
+            await _target.RegisterUser(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.Email == email.ToLowerInvariant() && u.DisplayEmail == email)), Times.Once);
-            _mockUnitOfWork.Verify(e => e.SaveChangesAsync(), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task RegisterUser_GeneratesTokens()
+        {
+            // Arrange
+            var refreshToken = "myjwt";
+            var accessToken = "access";
+            _mockJwtTokenService.Setup(e => e.GetRefreshToken(It.IsAny<int>())).Returns(refreshToken);
+            _mockJwtTokenService.Setup(e => e.GetAccessToken(It.IsAny<int>())).Returns(accessToken);
+
+            var email = "Sp3CiAlAddrEss@domAIN.cOm";
+            var registerUser = new RegisterUserDto
+            {
+                Email = email,
+                Password = "123",
+            };
+
+            // Act
+            var response = await _target.RegisterUser(registerUser);
+
+            // Assert
+            response.AccessToken.Should().Be(accessToken);
+            response.RefreshToken.Should().Be(refreshToken);
+            _mockRefreshTokenRepository.Verify(e => e.Insert(It.Is<RefreshToken>(u => u.EncodedValue == refreshToken)), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Exactly(2));
         }
 
         [Fact]
@@ -97,15 +131,150 @@ namespace Investager.Core.UnitTests.Services
         {
             // Arrange
             var errorMessage = "Unable to save.";
-            _mockUnitOfWork.Setup(e => e.SaveChangesAsync()).ThrowsAsync(new Exception(errorMessage));
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
             var registerUser = new RegisterUserDto { Email = "1@2.com", Password = "123" };
 
             // Act
-            Func<Task> act = async () => await _target.RegisterUserAsync(registerUser);
+            Func<Task> act = async () => await _target.RegisterUser(registerUser);
 
             // Assert
             act.Should().Throw<Exception>()
                 .WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task Login_GeneratesTokens()
+        {
+            // Arrange
+            var refreshToken = "myjwt";
+            var accessToken = "access";
+            _mockJwtTokenService.Setup(e => e.GetRefreshToken(It.IsAny<int>())).Returns(refreshToken);
+            _mockJwtTokenService.Setup(e => e.GetAccessToken(It.IsAny<int>())).Returns(accessToken);
+
+            var user = new User
+            {
+                FirstName = "gigino",
+                Email = "stuff@investager.com",
+                PasswordHash = new byte[] { 31, 155 },
+                PasswordSalt = new byte[] { 101, 2 },
+            };
+            _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User> { user });
+
+            var password = "s3cr3t";
+            _mockPasswordHelper.Setup(e => e.IsPasswordCorrect(password, user.PasswordHash, user.PasswordSalt)).Returns(true);
+
+            // Act
+            var response = await _target.Login(user.Email, password);
+
+            // Assert
+            response.FirstName.Should().Be(user.FirstName);
+            response.AccessToken.Should().Be(accessToken);
+            response.RefreshToken.Should().Be(refreshToken);
+            _mockRefreshTokenRepository.Verify(e => e.Insert(It.Is<RefreshToken>(u => u.EncodedValue == refreshToken)), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        }
+
+        [Fact]
+        public void Login_WhenSaveChangesFails_Throws()
+        {
+            // Arrange
+            var errorMessage = "Unable to save.";
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
+
+            var refreshToken = "myjwt";
+            var accessToken = "access";
+            _mockJwtTokenService.Setup(e => e.GetRefreshToken(It.IsAny<int>())).Returns(refreshToken);
+            _mockJwtTokenService.Setup(e => e.GetAccessToken(It.IsAny<int>())).Returns(accessToken);
+
+            var user = new User
+            {
+                FirstName = "gigino",
+                Email = "stuff@investager.com",
+                PasswordHash = new byte[] { 31, 155 },
+                PasswordSalt = new byte[] { 101, 2 },
+            };
+            _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User> { user });
+
+            var password = "s3cr3t";
+            _mockPasswordHelper.Setup(e => e.IsPasswordCorrect(password, user.PasswordHash, user.PasswordSalt)).Returns(true);
+
+            // Act
+            Func<Task> act = async () => await _target.Login(user.Email, password);
+
+            // Assert
+            act.Should().Throw<Exception>()
+                .WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public void Login_WhenPasswordIncorrect_Throws()
+        {
+            // Arrange
+            var user = new User
+            {
+                FirstName = "gigino",
+                Email = "stuff@investager.com",
+                PasswordHash = new byte[] { 31, 155 },
+                PasswordSalt = new byte[] { 101, 2 },
+            };
+            _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User> { user });
+
+            var password = "s3cr3t";
+            _mockPasswordHelper.Setup(e => e.IsPasswordCorrect(password, user.PasswordHash, user.PasswordSalt)).Returns(false);
+
+            // Act
+            Func<Task> act = async () => await _target.Login(user.Email, password);
+
+            // Assert
+            act.Should().Throw<InvalidPasswordException>()
+                .WithMessage("Password invalid.");
+        }
+
+        [Fact]
+        public async Task RefreshToken_GeneratesToken()
+        {
+            // Arrange
+            var refreshToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3IiwianRpIjoiZjkxZmU3MDQtYzk3NC00ZGNkLThhNDUtNmVkZGNkODYwNDkwIiwicnRrIjoiMSIsImlzcyI6ImludmVzdGFnZXIifQ.XzgfaEWn_LGSIFs1v6MgW3H0dWZpNhnXs-1TMLhAuow";
+            var accessToken = "access";
+            _mockJwtTokenService.Setup(e => e.GetAccessToken(It.IsAny<int>())).Returns(accessToken);
+
+            var userId = 7;
+
+            var refreshTokenEntity = new RefreshToken
+            {
+                Id = 1,
+                UserId = userId,
+                EncodedValue = refreshToken,
+            };
+
+            _mockRefreshTokenRepository.Setup(e => e.Find(It.IsAny<Expression<Func<RefreshToken, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<RefreshToken> { refreshTokenEntity });
+
+            // Act
+            var response = await _target.RefreshToken(refreshToken);
+
+            // Assert
+            response.Should().Be(accessToken);
+            _mockJwtTokenService.Verify(e => e.GetAccessToken(userId), Times.Once);
+            _mockRefreshTokenRepository.Verify(e => e.Insert(It.IsAny<RefreshToken>()), Times.Never);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
+        }
+
+        [Fact]
+        public void RefreshToken_WhenTokenNotFound_Throws()
+        {
+            // Arrange
+            var refreshToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3IiwianRpIjoiZjkxZmU3MDQtYzk3NC00ZGNkLThhNDUtNmVkZGNkODYwNDkwIiwicnRrIjoiMSIsImlzcyI6ImludmVzdGFnZXIifQ.XzgfaEWn_LGSIFs1v6MgW3H0dWZpNhnXs-1TMLhAuow";
+            var accessToken = "access";
+            _mockJwtTokenService.Setup(e => e.GetAccessToken(It.IsAny<int>())).Returns(accessToken);
+
+            _mockRefreshTokenRepository.Setup(e => e.Find(It.IsAny<Expression<Func<RefreshToken, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<RefreshToken>());
+
+            // Act
+            Func<Task> act = async () => await _target.RefreshToken(refreshToken);
+
+            // Assert
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("Sequence contains no elements");
         }
     }
 }
