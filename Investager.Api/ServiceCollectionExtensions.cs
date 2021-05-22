@@ -1,10 +1,12 @@
-﻿using Investager.Core.Interfaces;
+﻿using Investager.Api.Policies;
+using Investager.Core.Interfaces;
 using Investager.Core.Services;
 using Investager.Infrastructure.Factories;
 using Investager.Infrastructure.Helpers;
 using Investager.Infrastructure.Models;
 using Investager.Infrastructure.Persistence;
 using Investager.Infrastructure.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -19,6 +21,8 @@ namespace Investager.Api
             services.AddScoped<ICoreUnitOfWork, CoreUnitOfWork>();
             services.AddScoped<ITimeSeriesPointRepository, TimeSeriesPointRepository>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IPortfolioService, PortfolioService>();
+            services.AddScoped<IAuthorizationHandler, AuthenticatedUserHandler>();
 
             services.AddTransient<IPasswordHelper, PasswordHelper>();
             services.AddTransient<ITimeHelper, TimeHelper>();

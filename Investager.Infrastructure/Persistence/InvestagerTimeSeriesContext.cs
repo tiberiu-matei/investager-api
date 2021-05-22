@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Investager.Infrastructure.Persistence.Configurations;
+using Microsoft.EntityFrameworkCore;
 
 namespace Investager.Infrastructure.Persistence
 {

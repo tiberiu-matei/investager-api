@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Investager.Infrastructure.Persistence.Configurations;
+using Microsoft.EntityFrameworkCore;
 
 namespace Investager.Infrastructure.Persistence
 {
@@ -15,6 +16,8 @@ namespace Investager.Infrastructure.Persistence
         {
             modelBuilder.ApplyConfiguration(new UserConfiguration());
             modelBuilder.ApplyConfiguration(new AssetConfiguration());
+            modelBuilder.ApplyConfiguration(new PortfolioConfiguration());
+            modelBuilder.ApplyConfiguration(new PortfolioAssetConfiguration());
         }
     }
 }

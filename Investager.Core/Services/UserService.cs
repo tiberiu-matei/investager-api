@@ -16,12 +16,29 @@ namespace Investager.Core.Services
         private readonly IJwtTokenService _jwtTokenService;
         private readonly ITimeHelper _timeHelper;
 
-        public UserService(ICoreUnitOfWork unitOfWork, IPasswordHelper passwordHelper, IJwtTokenService jwtTokenService, ITimeHelper timeHelper)
+        public UserService(
+            ICoreUnitOfWork unitOfWork,
+            IPasswordHelper passwordHelper,
+            IJwtTokenService jwtTokenService,
+            ITimeHelper timeHelper)
         {
             _unitOfWork = unitOfWork;
             _passwordHelper = passwordHelper;
             _jwtTokenService = jwtTokenService;
             _timeHelper = timeHelper;
+        }
+
+        public async Task<UserDto> Get(int userId)
+        {
+            var users = await _unitOfWork.Users.Find(e => e.Id == userId);
+            var user = users.Single();
+
+            return new UserDto
+            {
+                Email = user.Email,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+            };
         }
 
         public async Task<RegisterUserResponse> RegisterUser(RegisterUserDto registerUserDto)
@@ -91,6 +108,22 @@ namespace Investager.Core.Services
             var accessToken = _jwtTokenService.GetAccessToken(userId);
 
             return accessToken;
+        }
+
+        public async Task Update(int userId, UpdateUserDto updateUserDto)
+        {
+            var user = await _unitOfWork.Users.GetByIdWithTracking(userId);
+            user.FirstName = updateUserDto.FirstName;
+            user.LastName = updateUserDto.LastName;
+
+            await _unitOfWork.SaveChanges();
+        }
+
+        public async Task Delete(int userId)
+        {
+            _unitOfWork.Users.Delete(userId);
+
+            await _unitOfWork.SaveChanges();
         }
 
         private async Task AddRefreshToken(User user, string refreshToken)

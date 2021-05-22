@@ -2,7 +2,6 @@
 using Investager.Core.Dtos;
 using Investager.Core.Services;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -41,49 +40,28 @@ namespace Investager.Api.Controllers
         [HttpPost("scan")]
         public async Task<IActionResult> Scan()
         {
-            try
-            {
-                var assetService = _assetServiceFactory.CreateService("Alpaca");
-                await assetService.ScanAssets();
+            var assetService = _assetServiceFactory.CreateService("Alpaca");
+            await assetService.ScanAssets();
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return NoContent();
         }
 
         [HttpPost("start")]
         public IActionResult Start()
         {
-            try
-            {
-                var dataCollectionService = _dataCollectionServiceFactory.GetService("Alpaca");
-                dataCollectionService.Start();
+            var dataCollectionService = _dataCollectionServiceFactory.GetService("Alpaca");
+            dataCollectionService.Start();
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return NoContent();
         }
 
         [HttpPost("stop")]
         public IActionResult Stop()
         {
-            try
-            {
-                var dataCollectionService = _dataCollectionServiceFactory.GetService("Alpaca");
-                dataCollectionService.Stop();
+            var dataCollectionService = _dataCollectionServiceFactory.GetService("Alpaca");
+            dataCollectionService.Stop();
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return NoContent();
         }
     }
 }

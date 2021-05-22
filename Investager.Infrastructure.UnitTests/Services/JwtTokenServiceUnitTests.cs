@@ -98,6 +98,25 @@ namespace Investager.Infrastructure.UnitTests.Services
             token.Payload["rtk"].Should().Be("1");
         }
 
+        [Fact]
+        public void Validate_WithCorrectToken_DoesNotThrow()
+        {
+            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(DateTime.UtcNow);
+            var encodedToken = _target.GetAccessToken(385);
+
+            var token = _target.Validate(encodedToken);
+
+            token.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void Validate_WithFakeToken_Throws()
+        {
+            Action act = () => _target.Validate("faketoken");
+
+            act.Should().Throw<Exception>();
+        }
+
         private JwtSecurityToken GetToken(string encodedToken)
         {
             var handler = new JwtSecurityTokenHandler();

@@ -10,7 +10,7 @@ namespace Investager.Core.Services
     {
         Task<IEnumerable<TEntity>> GetAll();
 
-        Task<TEntity> GetById(uint id);
+        Task<TEntity> GetByIdWithTracking(int id);
 
         Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, string includeProperties = "");
 
@@ -22,7 +22,7 @@ namespace Investager.Core.Services
 
         void Update(TEntity entityToUpdate);
 
-        void Delete(uint id);
+        void Delete(int id);
 
         void Delete(TEntity entityToDelete);
     }
