@@ -1,7 +1,8 @@
-﻿using Investager.Core.Dtos;
+﻿using Investager.Core.Constants;
+using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
@@ -17,49 +18,58 @@ namespace Investager.Api.Controllers
             _userService = userService;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
+        [HttpGet]
+        public async Task<IActionResult> Get()
         {
-            try
-            {
-                var response = await _userService.RegisterUser(registerUserDto);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            var response = await _userService.Get(userId);
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return Ok(response);
         }
 
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
+        {
+            var response = await _userService.Register(registerUserDto);
+
+            return Ok(response);
+        }
+
+        [AllowAnonymous]
         [HttpPut("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            try
-            {
-                var response = await _userService.Login(loginDto.Email, loginDto.Password);
+            var response = await _userService.Login(loginDto.Email, loginDto.Password);
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return Ok(response);
         }
 
+        [AllowAnonymous]
         [HttpPut("refreshtoken")]
-        public async Task<IActionResult> RefreshToken([FromBody] string refreshToken)
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
         {
-            try
-            {
-                var response = await _userService.RefreshToken(refreshToken);
+            var response = await _userService.RefreshToken(refreshTokenDto.RefreshToken);
 
-                return Ok(response);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return Ok(new AccessTokenDto { AccessToken = response });
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> Update([FromBody] UpdateUserDto updateUserDto)
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _userService.Update(userId, updateUserDto);
+
+            return NoContent();
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Delete()
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _userService.Delete(userId);
+
+            return NoContent();
         }
     }
 }

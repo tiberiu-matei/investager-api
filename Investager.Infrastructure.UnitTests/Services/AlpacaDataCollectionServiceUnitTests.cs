@@ -53,9 +53,9 @@ namespace Investager.Infrastructure.UnitTests.Services
         public async Task Stop_FinishesTheTask()
         {
             // Arrange
-            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(300);
+            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(400);
             _target.Start();
-            await Task.Delay(200);
+            await Task.Delay(100);
 
             // Act
             _target.Stop();
@@ -69,11 +69,11 @@ namespace Investager.Infrastructure.UnitTests.Services
         public async Task Task_RunsAtExpectedIntervals()
         {
             // Arrange
-            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(200);
+            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(400);
 
             // Act
             _target.Start();
-            await Task.Delay(350);
+            await Task.Delay(600);
             _target.Stop();
 
             // Assert

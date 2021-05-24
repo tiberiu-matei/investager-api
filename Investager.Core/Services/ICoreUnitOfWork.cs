@@ -12,6 +12,8 @@ namespace Investager.Core.Services
 
         IGenericRepository<Asset> Assets { get; }
 
+        IGenericRepository<Portfolio> Portfolios { get; }
+
         Task SaveChanges();
     }
 }

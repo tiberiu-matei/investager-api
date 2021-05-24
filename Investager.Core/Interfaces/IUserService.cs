@@ -5,10 +5,16 @@ namespace Investager.Core.Interfaces
 {
     public interface IUserService
     {
-        Task<RegisterUserResponse> RegisterUser(RegisterUserDto registerUserDto);
+        Task<UserDto> Get(int userId);
+
+        Task<RegisterUserResponse> Register(RegisterUserDto registerUserDto);
 
         Task<LoginResponse> Login(string email, string password);
 
         Task<string> RefreshToken(string refreshToken);
+
+        Task Update(int userId, UpdateUserDto updateUserDto);
+
+        Task Delete(int userId);
     }
 }

@@ -21,10 +21,10 @@ namespace Investager.Infrastructure.Persistence
 
         public async Task<IEnumerable<TEntity>> GetAll()
         {
-            return await _dbSet.ToListAsync();
+            return await _dbSet.AsNoTracking().ToListAsync();
         }
 
-        public async Task<TEntity> GetById(uint id)
+        public async Task<TEntity> GetByIdWithTracking(int id)
         {
             return await _dbSet.FindAsync(id);
         }
@@ -32,6 +32,7 @@ namespace Investager.Infrastructure.Persistence
         public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter = null, string includeProperties = "")
         {
             IQueryable<TEntity> query = _dbSet;
+            query.AsNoTracking();
 
             if (filter != null)
             {
@@ -51,6 +52,7 @@ namespace Investager.Infrastructure.Persistence
         {
             IQueryable<TEntity> query = _dbSet;
 
+            query.AsNoTracking();
             query = query.Where(filter);
             query = query.Take(take);
 
@@ -61,6 +63,7 @@ namespace Investager.Infrastructure.Persistence
         {
             IQueryable<TEntity> query = _dbSet;
 
+            query.AsNoTracking();
             query = query.Where(filter);
             query = orderBy(query);
             query = query.Take(take);
@@ -79,7 +82,7 @@ namespace Investager.Infrastructure.Persistence
             _context.Entry(entityToUpdate).State = EntityState.Modified;
         }
 
-        public void Delete(uint id)
+        public void Delete(int id)
         {
             var entityToDelete = _dbSet.Find(id);
             Delete(entityToDelete);

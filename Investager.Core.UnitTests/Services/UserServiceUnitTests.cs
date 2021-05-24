@@ -35,6 +35,43 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
+        public void Get_WhenUserNotFound_Throws()
+        {
+            // Arrange
+            _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User>());
+
+            // Act
+            Func<Task> act = async () => await _target.Get(1);
+
+            // Assert
+            act.Should().Throw<InvalidOperationException>()
+                .WithMessage("Sequence contains no elements");
+        }
+
+        [Fact]
+        public async Task Get_ReturnsExpectedProperties()
+        {
+            // Arrange
+            var user = new User
+            {
+                Id = 1,
+                Email = "abc@a.com",
+                FirstName = "dorel",
+                LastName = "pastrama",
+            };
+
+            _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User> { user });
+
+            // Act
+            var userDto = await _target.Get(1);
+
+            // Assert
+            userDto.Email.Should().Be(user.Email);
+            userDto.FirstName.Should().Be(user.FirstName);
+            userDto.LastName.Should().Be(user.LastName);
+        }
+
+        [Fact]
         public async Task RegisterUser_CallsSaveChanges()
         {
             // Arrange
@@ -47,7 +84,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUser(registerUser);
+            await _target.Register(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.IsAny<User>()), Times.Once);
@@ -74,7 +111,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUser(registerUser);
+            await _target.Register(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.PasswordSalt == encodedPassword.Salt && u.PasswordHash == encodedPassword.Hash)), Times.Once);
@@ -93,7 +130,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUser(registerUser);
+            await _target.Register(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.Email == email.ToLowerInvariant() && u.DisplayEmail == email)), Times.Once);
@@ -117,7 +154,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            var response = await _target.RegisterUser(registerUser);
+            var response = await _target.Register(registerUser);
 
             // Assert
             response.AccessToken.Should().Be(accessToken);
@@ -135,7 +172,7 @@ namespace Investager.Core.UnitTests.Services
             var registerUser = new RegisterUserDto { Email = "1@2.com", Password = "123" };
 
             // Act
-            Func<Task> act = async () => await _target.RegisterUser(registerUser);
+            Func<Task> act = async () => await _target.Register(registerUser);
 
             // Assert
             act.Should().Throw<Exception>()
@@ -275,6 +312,91 @@ namespace Investager.Core.UnitTests.Services
             // Assert
             act.Should().Throw<InvalidOperationException>()
                 .WithMessage("Sequence contains no elements");
+        }
+
+        [Fact]
+        public void Update_WhenSaveChangesFails_Throws()
+        {
+            // Arrange
+            var errorMessage = "Unable to save.";
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
+
+            var user = new User
+            {
+                FirstName = "gigino",
+                Email = "stuff@investager.com",
+            };
+            _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(user);
+
+            // Act
+            Func<Task> act = async () => await _target.Update(1, new UpdateUserDto());
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public void Update_WhenUserNotFound_Throws()
+        {
+            // Arrange
+            var errorMessage = "User not found.";
+            _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ThrowsAsync(new Exception(errorMessage));
+
+            // Act
+            Func<Task> act = async () => await _target.Update(1, new UpdateUserDto());
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task Update_ChangesValues()
+        {
+            // Arrange
+            var user = new User
+            {
+                FirstName = "gigino",
+                Email = "stuff@investager.com",
+            };
+            _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(user);
+
+            var dto = new UpdateUserDto
+            {
+                FirstName = "johnny",
+                LastName = "pastrami",
+            };
+
+            // Act
+            await _target.Update(1, dto);
+
+            // Assert
+            user.FirstName.Should().Be(dto.FirstName);
+            user.LastName.Should().Be(dto.LastName);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        }
+
+        [Fact]
+        public void Delete_WhenSaveChangesFails_Throws()
+        {
+            // Arrange
+            var errorMessage = "Unable to save.";
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
+
+            // Act
+            Func<Task> act = async () => await _target.Delete(1);
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task Delete_DoesNotThrow()
+        {
+            // Act
+            await _target.Delete(1);
+
+            // Assert
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
         }
     }
 }

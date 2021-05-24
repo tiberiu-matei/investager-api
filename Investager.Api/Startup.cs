@@ -1,3 +1,5 @@
+using Investager.Api.Middleware;
+using Investager.Api.Policies;
 using Investager.Core.Mapping;
 using Investager.Core.Models;
 using Investager.Infrastructure.Persistence;
@@ -35,8 +37,14 @@ namespace Investager.Api
 
             services.AddAutoMapper(e => e.AddProfile<AutoMapperProfile>());
 
+            services.AddHttpContextAccessor();
             services.AddControllers();
             services.AddInvestagerServices(Configuration);
+
+            services.AddAuthorization(e =>
+            {
+                e.AddPolicy(PolicyNames.User, p => p.Requirements.Add(new AuthenticatedUserRequirement()));
+            });
 
             services.AddHttpClient(HttpClients.AlpacaPaper, e =>
             {
@@ -75,9 +83,11 @@ namespace Investager.Api
 
             app.UseAuthorization();
 
+            app.UseMiddleware<ErrorHandlerMiddleware>();
+
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapControllers().RequireAuthorization(PolicyNames.User);
                 endpoints.MapGet("/api/v1/serviceinfo", async context => await context.Response.WriteAsync("Hello from Investager API."));
             });
         }

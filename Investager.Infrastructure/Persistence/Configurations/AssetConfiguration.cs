@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Investager.Infrastructure.Persistence
+namespace Investager.Infrastructure.Persistence.Configurations
 {
     public class AssetConfiguration : IEntityTypeConfiguration<Asset>
     {

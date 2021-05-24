@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
 using Investager.Core.Dtos;
+using Investager.Core.Models;
 using Investager.Core.Services;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -12,18 +12,18 @@ namespace Investager.Api.Controllers
     [Route("api/v1/[controller]")]
     public class AssetController : ControllerBase
     {
-        private readonly IDataProviderServiceFactory _assetServiceFactory;
+        private readonly IDataProviderServiceFactory _dataProviderServiceFactory;
         private readonly IDataCollectionServiceFactory _dataCollectionServiceFactory;
         private readonly ICoreUnitOfWork _coreUnitOfWork;
         private readonly IMapper _mapper;
 
         public AssetController(
-            IDataProviderServiceFactory assetServiceFactory,
+            IDataProviderServiceFactory dataProviderServiceFactory,
             IDataCollectionServiceFactory dataCollectionServiceFactory,
             ICoreUnitOfWork coreUnitOfWork,
             IMapper mapper)
         {
-            _assetServiceFactory = assetServiceFactory;
+            _dataProviderServiceFactory = dataProviderServiceFactory;
             _dataCollectionServiceFactory = dataCollectionServiceFactory;
             _coreUnitOfWork = coreUnitOfWork;
             _mapper = mapper;
@@ -41,49 +41,28 @@ namespace Investager.Api.Controllers
         [HttpPost("scan")]
         public async Task<IActionResult> Scan()
         {
-            try
-            {
-                var assetService = _assetServiceFactory.CreateService("Alpaca");
-                await assetService.ScanAssets();
+            var assetService = _dataProviderServiceFactory.CreateService(DataProviders.Alpaca);
+            await assetService.ScanAssets();
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return NoContent();
         }
 
         [HttpPost("start")]
         public IActionResult Start()
         {
-            try
-            {
-                var dataCollectionService = _dataCollectionServiceFactory.GetService("Alpaca");
-                dataCollectionService.Start();
+            var dataCollectionService = _dataCollectionServiceFactory.GetService(DataProviders.Alpaca);
+            dataCollectionService.Start();
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return NoContent();
         }
 
         [HttpPost("stop")]
         public IActionResult Stop()
         {
-            try
-            {
-                var dataCollectionService = _dataCollectionServiceFactory.GetService("Alpaca");
-                dataCollectionService.Stop();
+            var dataCollectionService = _dataCollectionServiceFactory.GetService(DataProviders.Alpaca);
+            dataCollectionService.Stop();
 
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ex.Message);
-            }
+            return NoContent();
         }
     }
 }

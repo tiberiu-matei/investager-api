@@ -2,7 +2,7 @@
 
 namespace Investager.Core.Exceptions
 {
-    public class InvalidPasswordException : Exception
+    public class InvalidPasswordException : InvestagerException
     {
         public InvalidPasswordException()
         {

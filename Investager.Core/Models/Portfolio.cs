@@ -8,8 +8,10 @@ namespace Investager.Core.Models
 
         public string Name { get; set; }
 
+        public int UserId { get; set; }
+
         public User User { get; set; }
 
-        public ICollection<Asset> Assets { get; set; } = new List<Asset>();
+        public ICollection<PortfolioAsset> PortfolioAssets { get; set; } = new List<PortfolioAsset>();
     }
 }

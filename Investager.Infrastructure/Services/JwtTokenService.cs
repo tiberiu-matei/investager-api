@@ -59,5 +59,20 @@ namespace Investager.Infrastructure.Services
 
             return token;
         }
+
+        public JwtSecurityToken Validate(string token)
+        {
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidIssuer = Issuer,
+                IssuerSigningKeys = new List<SecurityKey> { _signingCredentials.Key },
+                ValidateAudience = false,
+            };
+
+            var handler = new JwtSecurityTokenHandler();
+            handler.ValidateToken(token, validationParameters, out var validatedToken);
+
+            return validatedToken as JwtSecurityToken;
+        }
     }
 }
