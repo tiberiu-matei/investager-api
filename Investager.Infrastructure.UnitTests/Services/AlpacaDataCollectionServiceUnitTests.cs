@@ -69,11 +69,11 @@ namespace Investager.Infrastructure.UnitTests.Services
         public async Task Task_RunsAtExpectedIntervals()
         {
             // Arrange
-            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(200);
+            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(300);
 
             // Act
             _target.Start();
-            await Task.Delay(350);
+            await Task.Delay(500);
             _target.Stop();
 
             // Assert
