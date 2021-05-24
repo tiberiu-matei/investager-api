@@ -84,7 +84,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUser(registerUser);
+            await _target.Register(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.IsAny<User>()), Times.Once);
@@ -111,7 +111,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUser(registerUser);
+            await _target.Register(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.PasswordSalt == encodedPassword.Salt && u.PasswordHash == encodedPassword.Hash)), Times.Once);
@@ -130,7 +130,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            await _target.RegisterUser(registerUser);
+            await _target.Register(registerUser);
 
             // Assert
             _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.Email == email.ToLowerInvariant() && u.DisplayEmail == email)), Times.Once);
@@ -154,7 +154,7 @@ namespace Investager.Core.UnitTests.Services
             };
 
             // Act
-            var response = await _target.RegisterUser(registerUser);
+            var response = await _target.Register(registerUser);
 
             // Assert
             response.AccessToken.Should().Be(accessToken);
@@ -172,7 +172,7 @@ namespace Investager.Core.UnitTests.Services
             var registerUser = new RegisterUserDto { Email = "1@2.com", Password = "123" };
 
             // Act
-            Func<Task> act = async () => await _target.RegisterUser(registerUser);
+            Func<Task> act = async () => await _target.Register(registerUser);
 
             // Assert
             act.Should().Throw<Exception>()

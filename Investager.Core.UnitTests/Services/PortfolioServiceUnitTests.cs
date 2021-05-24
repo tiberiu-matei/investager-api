@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Investager.Core.Dtos;
 using Investager.Core.Models;
 using Investager.Core.Services;
 using Moq;
@@ -117,6 +118,195 @@ namespace Investager.Core.UnitTests.Services
             portfolioDtos.First().AssetIds.Should().Contain(portfolio1.PortfolioAssets.Last().AssetId);
             portfolioDtos.Last().AssetIds.Should().Contain(portfolio2.PortfolioAssets.First().AssetId);
             portfolioDtos.Last().AssetIds.Should().Contain(portfolio2.PortfolioAssets.Last().AssetId);
+        }
+
+        [Fact]
+        public void Create_WhenSaveChangesThrows_Throws()
+        {
+            // Arrange
+            var errorMessage = "Unable to save.";
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
+
+            // Act
+            Func<Task> act = async () => await _target.Create(1, new UpdatePortfolioDto { AssetIds = new List<int>() });
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task Create_AddsNewItem()
+        {
+            // Arrange
+            var dto = new UpdatePortfolioDto
+            {
+                Name = "jake",
+                AssetIds = new List<int> { 2, 5 },
+            };
+
+            // Act
+            var response = await _target.Create(1, dto);
+
+            // Assert
+            response.Name.Should().Be(dto.Name);
+            response.AssetIds.Count().Should().Be(2);
+            _mockPortfolioRepository.Verify(e => e.Insert(It.Is<Portfolio>(p => p.Name == dto.Name && p.PortfolioAssets.Count == 2)), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        }
+
+        [Fact]
+        public void Update_WhenPortfolioNotFound_Throws()
+        {
+            // Arrange
+            _mockPortfolioRepository.Setup(e => e.Find(It.IsAny<Expression<Func<Portfolio, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<Portfolio>());
+
+            // Act
+            Func<Task> act = async () => await _target.Update(1, 1, new UpdatePortfolioDto { AssetIds = new List<int>() });
+
+            // Assert
+            act.Should().Throw<Exception>();
+        }
+
+        [Fact]
+        public void Update_WhenSaveChangesThrows_Throws()
+        {
+            // Arrange
+            var existingPortfolio = new Portfolio
+            {
+                Id = 3,
+                Name = "dhura",
+                PortfolioAssets = new List<PortfolioAsset>
+                {
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
+                },
+                UserId = 5,
+            };
+
+            _mockPortfolioRepository.Setup(e => e.Find(It.IsAny<Expression<Func<Portfolio, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<Portfolio> { existingPortfolio });
+
+            var errorMessage = "Unable to save.";
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
+
+            // Act
+            Func<Task> act = async () => await _target.Update(existingPortfolio.UserId, existingPortfolio.Id, new UpdatePortfolioDto { AssetIds = new List<int>() });
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task Update_ChangesProperties()
+        {
+            // Arrange
+            var existingPortfolio = new Portfolio
+            {
+                Id = 3,
+                Name = "dhura",
+                PortfolioAssets = new List<PortfolioAsset>
+                {
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
+                },
+                UserId = 5,
+            };
+
+            _mockPortfolioRepository.Setup(e => e.Find(It.IsAny<Expression<Func<Portfolio, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<Portfolio> { existingPortfolio });
+
+            var dto = new UpdatePortfolioDto
+            {
+                Name = "jake",
+                AssetIds = new List<int> { 2, 5, 19 },
+            };
+
+            // Act
+            await _target.Update(existingPortfolio.UserId, existingPortfolio.Id, dto);
+
+            // Assert
+            existingPortfolio.Name.Should().Be(dto.Name);
+            existingPortfolio.PortfolioAssets.Count.Should().Be(3);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        }
+
+        [Fact]
+        public void Delete_WhenSaveChangesThrows_Throws()
+        {
+            // Arrange
+            var existingPortfolio = new Portfolio
+            {
+                Id = 3,
+                Name = "dhura",
+                PortfolioAssets = new List<PortfolioAsset>
+                {
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
+                },
+                UserId = 5,
+            };
+
+            _mockPortfolioRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(existingPortfolio);
+
+            var errorMessage = "Unable to save.";
+            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
+
+            // Act
+            Func<Task> act = async () => await _target.Delete(existingPortfolio.UserId, existingPortfolio.Id);
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public void Delete_WhenPortfolioBelongsToDifferentUser_Throws()
+        {
+            // Arrange
+            var existingPortfolio = new Portfolio
+            {
+                Id = 3,
+                Name = "dhura",
+                PortfolioAssets = new List<PortfolioAsset>
+                {
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
+                },
+                UserId = 5,
+            };
+
+            _mockPortfolioRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(existingPortfolio);
+
+            var errorMessage = "Cannot delete a portfolio for another user.";
+
+            // Act
+            Func<Task> act = async () => await _target.Delete(1, existingPortfolio.Id);
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task Delete_RemovesItem()
+        {
+            // Arrange
+            var existingPortfolio = new Portfolio
+            {
+                Id = 3,
+                Name = "dhura",
+                PortfolioAssets = new List<PortfolioAsset>
+                {
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
+                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
+                },
+                UserId = 5,
+            };
+
+            _mockPortfolioRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(existingPortfolio);
+
+            // Act
+            await _target.Delete(existingPortfolio.UserId, existingPortfolio.Id);
+
+            // Assert
+            _mockPortfolioRepository.Verify(e => e.Delete(existingPortfolio), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
         }
     }
 }

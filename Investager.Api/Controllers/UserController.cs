@@ -3,7 +3,6 @@ using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
@@ -22,7 +21,7 @@ namespace Investager.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
             var response = await _userService.Get(userId);
 
             return Ok(response);
@@ -32,7 +31,7 @@ namespace Investager.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
         {
-            var response = await _userService.RegisterUser(registerUserDto);
+            var response = await _userService.Register(registerUserDto);
 
             return Ok(response);
         }
@@ -58,7 +57,7 @@ namespace Investager.Api.Controllers
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] UpdateUserDto updateUserDto)
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
             await _userService.Update(userId, updateUserDto);
 
             return NoContent();
@@ -67,7 +66,7 @@ namespace Investager.Api.Controllers
         [HttpDelete]
         public async Task<IActionResult> Delete()
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
             await _userService.Delete(userId);
 
             return NoContent();

@@ -2,7 +2,6 @@
 using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
@@ -18,10 +17,10 @@ namespace Investager.Api.Controllers
             _portfolioService = portfolioService;
         }
 
-        [HttpGet("portfolioId")]
+        [HttpGet("{portfolioId}")]
         public async Task<IActionResult> GetById([FromRoute] int portfolioId)
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
             var portfolioDto = await _portfolioService.GetById(userId, portfolioId);
 
             return Ok(portfolioDto);
@@ -30,7 +29,7 @@ namespace Investager.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
             var portfolioDtos = await _portfolioService.GetAll(userId);
 
             return Ok(portfolioDtos);
@@ -39,8 +38,8 @@ namespace Investager.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] UpdatePortfolioDto updatePortfolioDto)
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
-            var portfolioDto = await _portfolioService.CreatePortfolio(userId, updatePortfolioDto);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            var portfolioDto = await _portfolioService.Create(userId, updatePortfolioDto);
 
             return Ok(portfolioDto);
         }
@@ -48,8 +47,8 @@ namespace Investager.Api.Controllers
         [HttpPut("{portfolioId}")]
         public async Task<IActionResult> Update([FromRoute] int portfolioId, [FromBody] UpdatePortfolioDto updatePortfolioDto)
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
-            await _portfolioService.UpdatePortfolio(userId, portfolioId, updatePortfolioDto);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _portfolioService.Update(userId, portfolioId, updatePortfolioDto);
 
             return NoContent();
         }
@@ -57,8 +56,8 @@ namespace Investager.Api.Controllers
         [HttpDelete("{portfolioId}")]
         public async Task<IActionResult> Delete([FromRoute] int portfolioId)
         {
-            var userId = Convert.ToInt32(HttpContext.Items[HttpContextKeys.UserId]);
-            await _portfolioService.DeletePortfolio(userId, portfolioId);
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _portfolioService.Delete(userId, portfolioId);
 
             return NoContent();
         }

@@ -41,7 +41,7 @@ namespace Investager.Core.Services
             };
         }
 
-        public async Task<RegisterUserResponse> RegisterUser(RegisterUserDto registerUserDto)
+        public async Task<RegisterUserResponse> Register(RegisterUserDto registerUserDto)
         {
             var encodedPassword = _passwordHelper.EncodePassword(registerUserDto.Password);
 

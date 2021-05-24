@@ -10,10 +10,10 @@ namespace Investager.Core.Interfaces
 
         Task<IEnumerable<PortfolioDto>> GetAll(int userId);
 
-        Task<PortfolioDto> CreatePortfolio(int userId, UpdatePortfolioDto updatePortfolioDto);
+        Task<PortfolioDto> Create(int userId, UpdatePortfolioDto updatePortfolioDto);
 
-        Task UpdatePortfolio(int userId, int portfolioId, UpdatePortfolioDto updatePortfolioDto);
+        Task Update(int userId, int portfolioId, UpdatePortfolioDto updatePortfolioDto);
 
-        Task DeletePortfolio(int userId, int portfolioId);
+        Task Delete(int userId, int portfolioId);
     }
 }

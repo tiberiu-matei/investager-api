@@ -21,6 +21,8 @@ namespace Investager.Core.Models
 
         public DateTime? LastPriceUpdate { get; set; }
 
+        public float LastPrice { get; set; }
+
         public ICollection<PortfolioAsset> PortfolioAssets = new List<PortfolioAsset>();
     }
 }

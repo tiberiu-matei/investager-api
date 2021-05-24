@@ -30,6 +30,7 @@ namespace Investager.Api
             services.AddTransient<IJwtTokenService, JwtTokenService>();
 
             services.AddSingleton<IDataCollectionServiceFactory, DataCollectionServiceFactory>();
+            services.AddSingleton<ICache, Cache>();
             services.AddSingleton(new AlpacaSettings());
 
             var secretKey = configuration["JwtSecretKey"];

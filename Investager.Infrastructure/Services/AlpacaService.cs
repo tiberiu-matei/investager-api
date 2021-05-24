@@ -107,6 +107,7 @@ namespace Investager.Infrastructure.Services
                 await _timeSeriesPointRepository.InsertRange(assetPrices);
 
                 assetToUpdate.LastPriceUpdate = to;
+                assetToUpdate.LastPrice = assetPrices.Last().Value;
                 _coreUnitOfWork.Assets.Update(assetToUpdate);
                 await _coreUnitOfWork.SaveChanges();
             }

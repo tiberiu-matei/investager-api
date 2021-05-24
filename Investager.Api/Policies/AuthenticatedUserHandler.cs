@@ -17,8 +17,7 @@ namespace Investager.Api.Policies
             _jwtTokenService = jwtTokenService;
         }
 
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
-                                                       AuthenticatedUserRequirement requirement)
+        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, AuthenticatedUserRequirement requirement)
         {
             var httpContext = _httpContextAccessor.HttpContext;
             httpContext.Request.Headers.TryGetValue("Authorization", out var authorization);

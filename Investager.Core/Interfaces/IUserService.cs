@@ -7,7 +7,7 @@ namespace Investager.Core.Interfaces
     {
         Task<UserDto> Get(int userId);
 
-        Task<RegisterUserResponse> RegisterUser(RegisterUserDto registerUserDto);
+        Task<RegisterUserResponse> Register(RegisterUserDto registerUserDto);
 
         Task<LoginResponse> Login(string email, string password);
 

@@ -32,7 +32,7 @@ namespace Investager.Core.Services
             return portfolios.Select(e => Map(e)).ToList();
         }
 
-        public async Task<PortfolioDto> CreatePortfolio(int userId, UpdatePortfolioDto updatePortfolioDto)
+        public async Task<PortfolioDto> Create(int userId, UpdatePortfolioDto updatePortfolioDto)
         {
             var portfolio = new Portfolio
             {
@@ -48,7 +48,7 @@ namespace Investager.Core.Services
             return Map(portfolio);
         }
 
-        public async Task UpdatePortfolio(int userId, int portfolioId, UpdatePortfolioDto updatePortfolioDto)
+        public async Task Update(int userId, int portfolioId, UpdatePortfolioDto updatePortfolioDto)
         {
             var portfolios = await _coreUnitOfWork.Portfolios.Find(e => e.Id == portfolioId && e.UserId == userId);
             var portfolio = portfolios.Single();
@@ -59,12 +59,12 @@ namespace Investager.Core.Services
             await _coreUnitOfWork.SaveChanges();
         }
 
-        public async Task DeletePortfolio(int userId, int portfolioId)
+        public async Task Delete(int userId, int portfolioId)
         {
             var portfolio = await _coreUnitOfWork.Portfolios.GetByIdWithTracking(portfolioId);
             if (portfolio.UserId != userId)
             {
-                throw new InvalidOperationException("Can not delete a portfolio for another user.");
+                throw new InvalidOperationException("Cannot delete a portfolio for another user.");
             }
 
             _coreUnitOfWork.Portfolios.Delete(portfolio);
