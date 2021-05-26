@@ -1,7 +1,7 @@
-﻿using Investager.Core.Models;
+﻿using Investager.Core.Dtos;
+using Investager.Core.Models;
 using Investager.Core.Services;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,23 +9,27 @@ using System.Threading.Tasks;
 
 namespace Investager.Infrastructure.Persistence
 {
-    public class TimeSeriesPointRepository : ITimeSeriesPointRepository
+    public class TimeSeriesRepository : ITimeSeriesRepository
     {
         private readonly InvestagerTimeSeriesContext _context;
 
-        public TimeSeriesPointRepository(InvestagerTimeSeriesContext context)
+        public TimeSeriesRepository(InvestagerTimeSeriesContext context)
         {
             _context = context;
         }
 
-        public Task<IEnumerable<TimeSeriesPoint>> Get(string key, DateTime from)
+        public async Task<TimeSeriesResponse> Get(string key)
         {
-            return Get(key, from, DateTime.UtcNow);
-        }
+            var points = await _context.TimeSeriesPoints
+                .Where(e => e.Key == key)
+                .Select(e => new TimePointResponse { Time = e.Time, Value = e.Value })
+                .ToListAsync();
 
-        public Task<IEnumerable<TimeSeriesPoint>> Get(string key, DateTime from, DateTime to)
-        {
-            throw new NotImplementedException();
+            return new TimeSeriesResponse
+            {
+                Key = key,
+                Points = points,
+            };
         }
 
         public async Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints)

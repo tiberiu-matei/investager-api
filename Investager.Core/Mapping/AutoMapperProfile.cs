@@ -8,7 +8,8 @@ namespace Investager.Core.Mapping
     {
         public AutoMapperProfile()
         {
-            CreateMap<Asset, AssetSummaryDto>();
+            CreateMap<Asset, AssetSummaryDto>()
+                .ForMember(e => e.Key, o => o.MapFrom(s => $"{s.Exchange}:{s.Symbol}"));
         }
     }
 }

@@ -23,8 +23,9 @@ namespace Investager.Infrastructure.UnitTests.Services
         private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
         private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
-        private readonly Mock<ITimeSeriesPointRepository> _mockTimeSeriesPointRepository = new Mock<ITimeSeriesPointRepository>();
+        private readonly Mock<ITimeSeriesRepository> _mockTimeSeriesRepository = new Mock<ITimeSeriesRepository>();
         private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
+        private readonly Mock<ICache> _mockCache = new Mock<ICache>();
         private readonly Asset _asset;
 
         private readonly AlpacaService _target;
@@ -60,8 +61,9 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target = new AlpacaService(
                 mockHttpClientFactory.Object,
                 _mockCoreUnitOfWork.Object,
-                _mockTimeSeriesPointRepository.Object,
-                _mockTimeHelper.Object);
+                _mockTimeSeriesRepository.Object,
+                _mockTimeHelper.Object,
+                _mockCache.Object);
         }
 
         [Fact]
@@ -175,7 +177,8 @@ namespace Investager.Infrastructure.UnitTests.Services
 
             // Assert
             act.Should().Throw<HttpRequestException>();
-            _mockTimeSeriesPointRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Never);
+            _mockTimeSeriesRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Never);
+            _mockCache.Verify(e => e.Clear(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
@@ -250,7 +253,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
 
-            _mockTimeSeriesPointRepository.Verify(e => e.InsertRange(It.Is<IEnumerable<TimeSeriesPoint>>(
+            _mockTimeSeriesRepository.Verify(e => e.InsertRange(It.Is<IEnumerable<TimeSeriesPoint>>(
                 e => e.Count() == 5 &&
                 e.All(e => e.Key == "NASDAQ:ZM") &&
                 e.ToList().ElementAt(0).Time == new DateTime(2016, 04, 12, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(0).Value == 12.81F &&
@@ -260,7 +263,8 @@ namespace Investager.Infrastructure.UnitTests.Services
                 e.ToList().ElementAt(4).Time == new DateTime(2016, 04, 18, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(4).Value == 13.25F)),
                     Times.Once);
 
-            _mockTimeSeriesPointRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Once);
+            _mockTimeSeriesRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Once);
+            _mockCache.Verify(e => e.Clear("NASDAQ:ZM"), Times.Once);
         }
     }
 }
