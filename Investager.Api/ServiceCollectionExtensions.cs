@@ -19,10 +19,12 @@ namespace Investager.Api
         public static void AddInvestagerServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<ICoreUnitOfWork, CoreUnitOfWork>();
-            services.AddScoped<ITimeSeriesPointRepository, TimeSeriesPointRepository>();
+            services.AddScoped<ITimeSeriesRepository, TimeSeriesRepository>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPortfolioService, PortfolioService>();
             services.AddScoped<IAuthorizationHandler, AuthenticatedUserHandler>();
+            services.AddScoped<ITimeSeriesService, TimeSeriesService>();
+            services.AddScoped<IAssetService, AssetService>();
 
             services.AddTransient<IPasswordHelper, PasswordHelper>();
             services.AddTransient<ITimeHelper, TimeHelper>();

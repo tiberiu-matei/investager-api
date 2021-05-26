@@ -17,19 +17,22 @@ namespace Investager.Infrastructure.Services
 
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ICoreUnitOfWork _coreUnitOfWork;
-        private readonly ITimeSeriesPointRepository _timeSeriesPointRepository;
+        private readonly ITimeSeriesRepository _timeSeriesRepository;
         private readonly ITimeHelper _timeHelper;
+        private readonly ICache _cache;
 
         public AlpacaService(
             IHttpClientFactory httpClientFactory,
             ICoreUnitOfWork coreUnitOfWork,
-            ITimeSeriesPointRepository timeSeriesPointRepository,
-            ITimeHelper timeHelper)
+            ITimeSeriesRepository timeSeriesPointRepository,
+            ITimeHelper timeHelper,
+            ICache cache)
         {
             _httpClientFactory = httpClientFactory;
             _coreUnitOfWork = coreUnitOfWork;
-            _timeSeriesPointRepository = timeSeriesPointRepository;
+            _timeSeriesRepository = timeSeriesPointRepository;
             _timeHelper = timeHelper;
+            _cache = cache;
         }
 
         public async Task<IEnumerable<Asset>> ScanAssets()
@@ -103,8 +106,11 @@ namespace Investager.Infrastructure.Services
                 var queryString = $"start={from.Value:O}&end={to:O}&timeframe=1Day&limit=10000";
                 var barsResponse = await client.GetFromJsonAsync<AlpacaBarsResponse>($"v2/stocks/{assetToUpdate.Symbol}/bars?{queryString}") ?? new AlpacaBarsResponse();
 
-                var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = $"{assetToUpdate.Exchange}:{assetToUpdate.Symbol}", Value = e.Close }).ToList();
-                await _timeSeriesPointRepository.InsertRange(assetPrices);
+                var key = $"{assetToUpdate.Exchange}:{assetToUpdate.Symbol}";
+                var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = key, Value = e.Close }).ToList();
+                await _timeSeriesRepository.InsertRange(assetPrices);
+
+                await _cache.Clear(key);
 
                 assetToUpdate.LastPriceUpdate = to;
                 assetToUpdate.LastPrice = assetPrices.Last().Value;

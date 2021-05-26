@@ -10,13 +10,13 @@ using Xunit;
 
 namespace Investager.Infrastructure.UnitTests.Persistence
 {
-    public class TimeSeriesPointRepositoryUnitTests
+    public class TimeSeriesRepositoryUnitTests
     {
         private readonly InvestagerTimeSeriesContext _context;
 
-        private readonly TimeSeriesPointRepository _target;
+        private readonly TimeSeriesRepository _target;
 
-        public TimeSeriesPointRepositoryUnitTests()
+        public TimeSeriesRepositoryUnitTests()
         {
             var contextOptions = new DbContextOptionsBuilder<InvestagerTimeSeriesContext>()
                 .UseSqlite("Filename=Test.db")
@@ -26,27 +26,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
 
-            _target = new TimeSeriesPointRepository(_context);
-        }
-
-        [Fact]
-        public void Get_UntilCurrentTime_Throws()
-        {
-            // Act
-            Func<Task> act = async () => await _target.Get("fake", new DateTime(2021, 01, 01));
-
-            // Assert
-            act.Should().Throw<NotImplementedException>();
-        }
-
-        [Fact]
-        public void Get_WithTimeRange_Throws()
-        {
-            // Act
-            Func<Task> act = async () => await _target.Get("fake", new DateTime(2021, 01, 01), new DateTime(2021, 03, 01));
-
-            // Assert
-            act.Should().Throw<NotImplementedException>();
+            _target = new TimeSeriesRepository(_context);
         }
 
         [Fact]

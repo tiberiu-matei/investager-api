@@ -1,10 +1,13 @@
-﻿using Investager.Infrastructure.Persistence.Configurations;
+﻿using Investager.Core.Models;
+using Investager.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
 
 namespace Investager.Infrastructure.Persistence
 {
     public class InvestagerTimeSeriesContext : DbContext
     {
+        public DbSet<TimeSeriesPoint> TimeSeriesPoints { get; set; }
+
         public InvestagerTimeSeriesContext(DbContextOptions<InvestagerTimeSeriesContext> options) : base(options) { }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -14,7 +17,7 @@ namespace Investager.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfiguration(new AssetPriceConfiguration());
+            modelBuilder.ApplyConfiguration(new TimeSeriesPointConfiguration());
         }
     }
 }

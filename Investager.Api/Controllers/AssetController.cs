@@ -1,9 +1,7 @@
-﻿using AutoMapper;
-using Investager.Core.Dtos;
+﻿using Investager.Core.Interfaces;
 using Investager.Core.Models;
 using Investager.Core.Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
@@ -14,26 +12,22 @@ namespace Investager.Api.Controllers
     {
         private readonly IDataProviderServiceFactory _dataProviderServiceFactory;
         private readonly IDataCollectionServiceFactory _dataCollectionServiceFactory;
-        private readonly ICoreUnitOfWork _coreUnitOfWork;
-        private readonly IMapper _mapper;
+        private readonly IAssetService _assetService;
 
         public AssetController(
             IDataProviderServiceFactory dataProviderServiceFactory,
             IDataCollectionServiceFactory dataCollectionServiceFactory,
-            ICoreUnitOfWork coreUnitOfWork,
-            IMapper mapper)
+            IAssetService assetService)
         {
             _dataProviderServiceFactory = dataProviderServiceFactory;
             _dataCollectionServiceFactory = dataCollectionServiceFactory;
-            _coreUnitOfWork = coreUnitOfWork;
-            _mapper = mapper;
+            _assetService = assetService;
         }
 
         [HttpGet("all")]
         public async Task<IActionResult> GetAll()
         {
-            var assets = await _coreUnitOfWork.Assets.GetAll();
-            var assetDtos = _mapper.Map<IEnumerable<AssetSummaryDto>>(assets);
+            var assetDtos = await _assetService.GetAll();
 
             return Ok(assetDtos);
         }

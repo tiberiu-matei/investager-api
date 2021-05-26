@@ -1,9 +1,7 @@
-﻿using AutoMapper;
-using FluentAssertions;
+﻿using FluentAssertions;
 using Investager.Api.Controllers;
 using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
-using Investager.Core.Models;
 using Investager.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -18,22 +16,17 @@ namespace Investager.Api.UnitTests.Controllers
     {
         private readonly Mock<IDataProviderServiceFactory> _mockDataProviderServiceFactory = new Mock<IDataProviderServiceFactory>();
         private readonly Mock<IDataCollectionServiceFactory> _mockDataCollectionServiceFactory = new Mock<IDataCollectionServiceFactory>();
-        private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
-        private readonly Mock<IMapper> _mockMapper = new Mock<IMapper>();
-
-        private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
+        private readonly Mock<IAssetService> _mockAssetService = new Mock<IAssetService>();
 
         private readonly AssetController _target;
 
         public AssetControllerUnitTests()
         {
-            _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
 
             _target = new AssetController(
                 _mockDataProviderServiceFactory.Object,
                 _mockDataCollectionServiceFactory.Object,
-                _mockCoreUnitOfWork.Object,
-                _mockMapper.Object);
+                _mockAssetService.Object);
         }
 
         [Fact]
@@ -47,8 +40,7 @@ namespace Investager.Api.UnitTests.Controllers
                 Name = "Zoooom",
             };
 
-            _mockAssetRepository.Setup(e => e.GetAll()).ReturnsAsync(new List<Asset>());
-            _mockMapper.Setup(e => e.Map<IEnumerable<AssetSummaryDto>>(It.IsAny<object>())).Returns(new List<AssetSummaryDto> { dto });
+            _mockAssetService.Setup(e => e.GetAll()).ReturnsAsync(new List<AssetSummaryDto> { dto });
 
             // Act
             var response = await _target.GetAll();
