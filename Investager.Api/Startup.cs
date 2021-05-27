@@ -68,15 +68,12 @@ namespace Investager.Api
                 app.UseDeveloperExceptionPage();
             }
 
-<<<<<<< HEAD
             using var scope = app.ApplicationServices.CreateScope();
             var coreContext = scope.ServiceProvider.GetService<InvestagerCoreContext>();
             coreContext?.Database.Migrate();
             var timeSeriesContext = scope.ServiceProvider.GetService<InvestagerTimeSeriesContext>();
             timeSeriesContext?.Database.Migrate();
 
-=======
->>>>>>> release
             app.UseForwardedHeaders(new ForwardedHeadersOptions
             {
                 ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
