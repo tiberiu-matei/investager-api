@@ -19,7 +19,7 @@ namespace Investager.Core.Models
 
         public string Currency { get; set; }
 
-        public DateTime? LastPriceUpdate { get; set; }
+        public DateTime LastPriceUpdate { get; set; }
 
         public float? LastPrice { get; set; }
 

@@ -8,6 +8,6 @@ namespace Investager.Core.Interfaces
     {
         public Task<IEnumerable<Asset>> ScanAssets();
 
-        public Task UpdateTimeSeriesData();
+        public Task UpdateTimeSeriesData(Asset asset);
     }
 }
