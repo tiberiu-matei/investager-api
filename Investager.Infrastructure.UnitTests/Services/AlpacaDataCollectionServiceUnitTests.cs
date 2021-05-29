@@ -6,6 +6,7 @@ using Investager.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -14,12 +15,36 @@ namespace Investager.Infrastructure.UnitTests.Services
     public class AlpacaDataCollectionServiceUnitTests
     {
         private readonly Mock<IDataProviderService> _mockDataProviderService = new Mock<IDataProviderService>();
+        private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
+        private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
         private readonly AlpacaSettings _alpacaSettings = new AlpacaSettings();
+        private readonly List<Asset> _assets;
 
         private readonly AlpacaDataCollectionService _target;
 
         public AlpacaDataCollectionServiceUnitTests()
         {
+            _assets = new List<Asset>
+            {
+                new Asset
+                {
+                    Id = 1,
+                    Symbol = "ZM",
+                    LastPriceUpdate = new DateTime(2020, 02, 02),
+                },
+                new Asset
+                {
+                    Id = 2,
+                    Symbol = "SE",
+                },
+                new Asset
+                {
+                    Id = 3,
+                    Symbol = "ROKU",
+                    LastPriceUpdate = new DateTime(2021, 02, 02),
+                },
+            };
+
             var mockFactory = new Mock<IDataProviderServiceFactory>();
             mockFactory.Setup(e => e.CreateService(DataProviders.Alpaca)).Returns(_mockDataProviderService.Object);
 
@@ -27,7 +52,10 @@ namespace Investager.Infrastructure.UnitTests.Services
             var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
             mockServiceScopeFactory.Setup(e => e.CreateScope()).Returns(mockScope.Object);
             var mockServiceProvider = new Mock<IServiceProvider>();
+            _mockAssetRepository.Setup(e => e.GetAllTracked()).ReturnsAsync(_assets);
+            _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
             mockServiceProvider.Setup(e => e.GetService(typeof(IDataProviderServiceFactory))).Returns(mockFactory.Object);
+            mockServiceProvider.Setup(e => e.GetService(typeof(ICoreUnitOfWork))).Returns(_mockCoreUnitOfWork.Object);
             mockScope.Setup(e => e.ServiceProvider).Returns(mockServiceProvider.Object);
 
             _target = new AlpacaDataCollectionService(
@@ -46,7 +74,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Once);
         }
 
         [Fact]
@@ -62,7 +90,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             await Task.Delay(500);
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Once);
         }
 
         [Fact]
@@ -77,7 +105,55 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(), Times.Exactly(2));
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Exactly(2));
+        }
+
+        [Fact]
+        public async Task Task_OrdersAssetsByLastDateModified_BeforeCallingService()
+        {
+            // Arrange
+            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(1000);
+
+            // Act
+            _target.Start();
+            await Task.Delay(200);
+            _target.Stop();
+
+            // Assert
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.Is<Asset>(e => e.Id == 2)), Times.Once);
+        }
+
+        [Fact]
+        public async Task Task_CallsUpdateAgain_AfterWaitingBetweenCollections()
+        {
+            // Arrange
+            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(1);
+            _alpacaSettings.PeriodBetweenDataRequestBathes = TimeSpan.FromMilliseconds(300);
+
+            // Act
+            _target.Start();
+            await Task.Delay(500);
+            _target.Stop();
+
+            // Assert
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Exactly(6));
+        }
+
+        [Fact]
+        public async Task Task_WhenOneUpdateThrows_ContinuesSequence()
+        {
+            // Arrange
+            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(1);
+            _mockDataProviderService.Setup(e => e.UpdateTimeSeriesData(It.IsAny<Asset>())).Throws(new Exception("big boomer."));
+
+            // Act
+            _target.Start();
+            await Task.Delay(500);
+            _target.Stop();
+
+            // Assert
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Exactly(3));
         }
     }
 }

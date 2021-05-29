@@ -24,6 +24,11 @@ namespace Investager.Infrastructure.Persistence
             return await _dbSet.AsNoTracking().ToListAsync();
         }
 
+        public async Task<IEnumerable<TEntity>> GetAllTracked()
+        {
+            return await _dbSet.ToListAsync();
+        }
+
         public async Task<TEntity> GetByIdWithTracking(int id)
         {
             return await _dbSet.FindAsync(id);

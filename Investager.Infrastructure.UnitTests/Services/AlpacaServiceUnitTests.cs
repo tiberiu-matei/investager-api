@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -46,10 +45,6 @@ namespace Investager.Infrastructure.UnitTests.Services
                 Symbol = "ZM",
                 Provider = DataProviders.Alpaca,
             };
-
-            _mockAssetRepository
-                .Setup(e => e.Find(It.IsAny<Expression<Func<Asset, bool>>>(), It.IsAny<Func<IQueryable<Asset>, IOrderedQueryable<Asset>>>(), It.IsAny<int>()))
-                .ReturnsAsync(new List<Asset> { _asset });
 
             var mockHttpClientFactory = new Mock<IHttpClientFactory>();
             mockHttpClientFactory.Setup(e => e.CreateClient(It.IsAny<string>())).Returns(httpClient);
@@ -173,7 +168,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            Func<Task> act = async () => await _target.UpdateTimeSeriesData();
+            Func<Task> act = async () => await _target.UpdateTimeSeriesData(_asset);
 
             // Assert
             act.Should().Throw<HttpRequestException>();
@@ -204,7 +199,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            await _target.UpdateTimeSeriesData();
+            await _target.UpdateTimeSeriesData(_asset);
 
             // Assert
             _mockHttpMessageHandler
@@ -242,7 +237,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            await _target.UpdateTimeSeriesData();
+            await _target.UpdateTimeSeriesData(_asset);
 
             // Assert
             _mockHttpMessageHandler

@@ -10,6 +10,8 @@ namespace Investager.Core.Services
     {
         Task<IEnumerable<TEntity>> GetAll();
 
+        Task<IEnumerable<TEntity>> GetAllTracked();
+
         Task<TEntity> GetByIdWithTracking(int id);
 
         Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, string includeProperties = "");

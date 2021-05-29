@@ -1,6 +1,7 @@
 ﻿using Investager.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System;
 
 namespace Investager.Infrastructure.Persistence.Configurations
 {
@@ -15,6 +16,7 @@ namespace Investager.Infrastructure.Persistence.Configurations
             builder.Property(e => e.Exchange).IsRequired();
             builder.Property(e => e.Name).IsRequired();
             builder.Property(e => e.Currency).IsRequired();
+            builder.Property(e => e.LastPriceUpdate).HasConversion(e => e, e => DateTime.SpecifyKind(e, DateTimeKind.Utc));
             builder.HasIndex(e => new { e.Symbol, e.Exchange }).IsUnique();
         }
     }
