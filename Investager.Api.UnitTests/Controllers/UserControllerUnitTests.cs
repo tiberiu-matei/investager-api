@@ -46,8 +46,7 @@ namespace Investager.Api.UnitTests.Controllers
             var dto = new UserDto
             {
                 Email = "dhura@dora.sq",
-                FirstName = "Dhurata",
-                LastName = "Dora",
+                DisplayName = "Dhurata",
             };
 
             _mockUserService.Setup(e => e.Get(userId)).ReturnsAsync(dto);
@@ -71,8 +70,7 @@ namespace Investager.Api.UnitTests.Controllers
             {
                 Email = "dhura@dora.sq",
                 Password = "keshkesh",
-                FirstName = "Dhurata",
-                LastName = "Dora",
+                DisplayName = "Dhurata",
             };
 
             var dto = new RegisterUserResponse
@@ -106,7 +104,7 @@ namespace Investager.Api.UnitTests.Controllers
 
             var dto = new LoginResponse
             {
-                FirstName = "Dhurata",
+                DisplayName = "Dhurata",
                 AccessToken = "abc",
                 RefreshToken = "def",
             };
@@ -168,8 +166,7 @@ namespace Investager.Api.UnitTests.Controllers
 
             var request = new UpdateUserDto
             {
-                FirstName = "Dhurata",
-                LastName = "Dora",
+                DisplayName = "Dhurata",
             };
 
             // Act

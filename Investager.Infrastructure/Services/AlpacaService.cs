@@ -95,14 +95,18 @@ namespace Investager.Infrastructure.Services
             var queryString = $"start={from:O}&end={to:O}&timeframe=1Day&limit=10000";
             var barsResponse = await client.GetFromJsonAsync<AlpacaBarsResponse>($"v2/stocks/{asset.Symbol}/bars?{queryString}") ?? new AlpacaBarsResponse();
 
-            var key = $"{asset.Exchange}:{asset.Symbol}";
-            var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = key, Value = e.Close }).ToList();
-            await _timeSeriesRepository.InsertRange(assetPrices);
+            if (barsResponse.Bars.Any())
+            {
+                var key = $"{asset.Exchange}:{asset.Symbol}";
+                var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = key, Value = e.Close }).ToList();
+                await _timeSeriesRepository.InsertRange(assetPrices);
 
-            await _cache.Clear(key);
+                await _cache.Clear(key);
+
+                asset.LastPrice = assetPrices.Last().Value;
+            }
 
             asset.LastPriceUpdate = to;
-            asset.LastPrice = assetPrices.Last().Value;
             _coreUnitOfWork.Assets.Update(asset);
             await _coreUnitOfWork.SaveChanges();
         }

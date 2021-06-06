@@ -28,6 +28,7 @@ namespace Investager.Api.Middleware
 
                 response.StatusCode = error switch
                 {
+                    InvalidBearerTokenException => (int)HttpStatusCode.Unauthorized,
                     InvestagerException => (int)HttpStatusCode.BadRequest,
                     _ => (int)HttpStatusCode.InternalServerError,
                 };

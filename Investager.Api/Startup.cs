@@ -38,6 +38,7 @@ namespace Investager.Api
             services.AddAutoMapper(e => e.AddProfile<AutoMapperProfile>());
 
             services.AddHttpContextAccessor();
+            services.AddCors();
             services.AddControllers();
             services.AddInvestagerServices(Configuration);
 
@@ -81,14 +82,19 @@ namespace Investager.Api
 
             app.UseRouting();
 
-            app.UseAuthorization();
+            app.UseCors(e => e
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowAnyOrigin());
 
             app.UseMiddleware<ErrorHandlerMiddleware>();
 
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers().RequireAuthorization(PolicyNames.User);
                 endpoints.MapGet("/api/v1/serviceinfo", async context => await context.Response.WriteAsync("Hello from Investager API."));
+                endpoints.MapControllers().RequireAuthorization(PolicyNames.User);
             });
         }
 

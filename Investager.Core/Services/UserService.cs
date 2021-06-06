@@ -36,8 +36,7 @@ namespace Investager.Core.Services
             return new UserDto
             {
                 Email = user.Email,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
+                DisplayName = user.DisplayName,
             };
         }
 
@@ -47,10 +46,9 @@ namespace Investager.Core.Services
 
             var user = new User
             {
-                FirstName = registerUserDto.FirstName,
-                LastName = registerUserDto.LastName,
                 Email = registerUserDto.Email.ToLowerInvariant(),
                 DisplayEmail = registerUserDto.Email,
+                DisplayName = registerUserDto.DisplayName,
                 PasswordSalt = encodedPassword.Salt,
                 PasswordHash = encodedPassword.Hash,
             };
@@ -90,7 +88,7 @@ namespace Investager.Core.Services
 
             var response = new LoginResponse
             {
-                FirstName = user.FirstName,
+                DisplayName = user.DisplayName,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
             };
@@ -113,8 +111,7 @@ namespace Investager.Core.Services
         public async Task Update(int userId, UpdateUserDto updateUserDto)
         {
             var user = await _unitOfWork.Users.GetByIdWithTracking(userId);
-            user.FirstName = updateUserDto.FirstName;
-            user.LastName = updateUserDto.LastName;
+            user.DisplayName = updateUserDto.DisplayName;
 
             await _unitOfWork.SaveChanges();
         }
