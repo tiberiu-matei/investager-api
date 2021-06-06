@@ -56,8 +56,7 @@ namespace Investager.Core.UnitTests.Services
             {
                 Id = 1,
                 Email = "abc@a.com",
-                FirstName = "dorel",
-                LastName = "pastrama",
+                DisplayName = "dorel",
             };
 
             _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User> { user });
@@ -67,8 +66,7 @@ namespace Investager.Core.UnitTests.Services
 
             // Assert
             userDto.Email.Should().Be(user.Email);
-            userDto.FirstName.Should().Be(user.FirstName);
-            userDto.LastName.Should().Be(user.LastName);
+            userDto.DisplayName.Should().Be(user.DisplayName);
         }
 
         [Fact]
@@ -79,8 +77,7 @@ namespace Investager.Core.UnitTests.Services
             {
                 Email = "1@2.com",
                 Password = "s3cur3",
-                FirstName = "d0r3l",
-                LastName = "cast@n@",
+                DisplayName = "d0r3l",
             };
 
             // Act
@@ -190,7 +187,7 @@ namespace Investager.Core.UnitTests.Services
 
             var user = new User
             {
-                FirstName = "gigino",
+                DisplayName = "gigino",
                 Email = "stuff@investager.com",
                 PasswordHash = new byte[] { 31, 155 },
                 PasswordSalt = new byte[] { 101, 2 },
@@ -204,7 +201,7 @@ namespace Investager.Core.UnitTests.Services
             var response = await _target.Login(user.Email, password);
 
             // Assert
-            response.FirstName.Should().Be(user.FirstName);
+            response.DisplayName.Should().Be(user.DisplayName);
             response.AccessToken.Should().Be(accessToken);
             response.RefreshToken.Should().Be(refreshToken);
             _mockRefreshTokenRepository.Verify(e => e.Insert(It.Is<RefreshToken>(u => u.EncodedValue == refreshToken)), Times.Once);
@@ -225,7 +222,7 @@ namespace Investager.Core.UnitTests.Services
 
             var user = new User
             {
-                FirstName = "gigino",
+                DisplayName = "gigino",
                 Email = "stuff@investager.com",
                 PasswordHash = new byte[] { 31, 155 },
                 PasswordSalt = new byte[] { 101, 2 },
@@ -249,7 +246,7 @@ namespace Investager.Core.UnitTests.Services
             // Arrange
             var user = new User
             {
-                FirstName = "gigino",
+                DisplayName = "gigino",
                 Email = "stuff@investager.com",
                 PasswordHash = new byte[] { 31, 155 },
                 PasswordSalt = new byte[] { 101, 2 },
@@ -323,7 +320,7 @@ namespace Investager.Core.UnitTests.Services
 
             var user = new User
             {
-                FirstName = "gigino",
+                DisplayName = "gigino",
                 Email = "stuff@investager.com",
             };
             _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(user);
@@ -355,23 +352,21 @@ namespace Investager.Core.UnitTests.Services
             // Arrange
             var user = new User
             {
-                FirstName = "gigino",
+                DisplayName = "gigino",
                 Email = "stuff@investager.com",
             };
             _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(user);
 
             var dto = new UpdateUserDto
             {
-                FirstName = "johnny",
-                LastName = "pastrami",
+                DisplayName = "johnny",
             };
 
             // Act
             await _target.Update(1, dto);
 
             // Assert
-            user.FirstName.Should().Be(dto.FirstName);
-            user.LastName.Should().Be(dto.LastName);
+            user.DisplayName.Should().Be(dto.DisplayName);
             _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
         }
 

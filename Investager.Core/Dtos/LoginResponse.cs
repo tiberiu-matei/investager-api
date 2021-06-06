@@ -2,7 +2,7 @@
 {
     public class LoginResponse
     {
-        public string FirstName { get; set; }
+        public string DisplayName { get; set; }
 
         public string AccessToken { get; set; }
 

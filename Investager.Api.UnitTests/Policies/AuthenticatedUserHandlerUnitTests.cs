@@ -1,6 +1,7 @@
 ﻿using FluentAssertions;
 using Investager.Api.Policies;
 using Investager.Core.Constants;
+using Investager.Core.Exceptions;
 using Investager.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,8 @@ namespace Investager.Api.UnitTests.Policies
 {
     public class AuthenticatedUserHandlerUnitTests
     {
+        private const string InvalidBearerMessage = "Bearer token not provided or invalid.";
+
         private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         private readonly Mock<IJwtTokenService> _mockJwtTokenService = new Mock<IJwtTokenService>();
         private readonly HttpContext _httpContext = new DefaultHttpContext();
@@ -38,7 +41,7 @@ namespace Investager.Api.UnitTests.Policies
             Func<Task> act = async () => await _target.HandleAsync(_context);
 
             // Assert
-            act.Should().Throw<Exception>();
+            act.Should().Throw<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
             _context.HasSucceeded.Should().BeFalse();
         }
 
@@ -52,7 +55,7 @@ namespace Investager.Api.UnitTests.Policies
             Func<Task> act = async () => await _target.HandleAsync(_context);
 
             // Assert
-            act.Should().Throw<Exception>();
+            act.Should().Throw<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
             _context.HasSucceeded.Should().BeFalse();
         }
 
@@ -68,7 +71,7 @@ namespace Investager.Api.UnitTests.Policies
             Func<Task> act = async () => await _target.HandleAsync(_context);
 
             // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
+            act.Should().Throw<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
             _context.HasSucceeded.Should().BeFalse();
         }
 
