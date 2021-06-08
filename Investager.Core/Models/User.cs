@@ -12,6 +12,8 @@ namespace Investager.Core.Models
 
         public string DisplayName { get; set; }
 
+        public Theme Theme { get; set; }
+
         public byte[] PasswordHash { get; set; }
 
         public byte[] PasswordSalt { get; set; }

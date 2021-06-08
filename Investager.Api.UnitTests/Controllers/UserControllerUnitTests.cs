@@ -3,6 +3,7 @@ using Investager.Api.Controllers;
 using Investager.Core.Constants;
 using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
+using Investager.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -47,6 +48,7 @@ namespace Investager.Api.UnitTests.Controllers
             {
                 Email = "dhura@dora.sq",
                 DisplayName = "Dhurata",
+                Theme = Theme.Dark,
             };
 
             _mockUserService.Setup(e => e.Get(userId)).ReturnsAsync(dto);
@@ -105,6 +107,7 @@ namespace Investager.Api.UnitTests.Controllers
             var dto = new LoginResponse
             {
                 DisplayName = "Dhurata",
+                Theme = Theme.Dark,
                 AccessToken = "abc",
                 RefreshToken = "def",
             };
@@ -154,7 +157,7 @@ namespace Investager.Api.UnitTests.Controllers
 
             // Assert
             act.Should().Throw<Exception>();
-            _mockUserService.Verify(e => e.Get(It.IsAny<int>()), Times.Never);
+            _mockUserService.Verify(e => e.Update(It.IsAny<int>(), It.IsAny<UpdateUserDto>()), Times.Never);
         }
 
         [Fact]
@@ -176,6 +179,33 @@ namespace Investager.Api.UnitTests.Controllers
             // Assert
             result.StatusCode.Should().Be(204);
             _mockUserService.Verify(e => e.Update(userId, request), Times.Once);
+        }
+
+        [Fact]
+        public void UpdateTheme_WhenUserIdNotPresent_Throws()
+        {
+            // Act
+            Func<Task> act = async () => await _target.UpdateTheme(new UpdateThemeRequest { Theme = Theme.Light });
+
+            // Assert
+            act.Should().Throw<Exception>();
+            _mockUserService.Verify(e => e.UpdateTheme(It.IsAny<int>(), It.IsAny<Theme>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task UpdateTheme_CallsService()
+        {
+            // Arrange
+            var userId = 3;
+            _httpContext.Items[HttpContextKeys.UserId] = userId.ToString();
+
+            // Act
+            var response = await _target.UpdateTheme(new UpdateThemeRequest { Theme = Theme.Dark });
+            var result = response as NoContentResult;
+
+            // Assert
+            result.StatusCode.Should().Be(204);
+            _mockUserService.Verify(e => e.UpdateTheme(userId, Theme.Dark), Times.Once);
         }
 
         [Fact]
