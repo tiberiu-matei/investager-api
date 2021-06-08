@@ -37,6 +37,7 @@ namespace Investager.Core.Services
             {
                 Email = user.Email,
                 DisplayName = user.DisplayName,
+                Theme = user.Theme,
             };
         }
 
@@ -49,6 +50,7 @@ namespace Investager.Core.Services
                 Email = registerUserDto.Email.ToLowerInvariant(),
                 DisplayEmail = registerUserDto.Email,
                 DisplayName = registerUserDto.DisplayName,
+                Theme = Theme.None,
                 PasswordSalt = encodedPassword.Salt,
                 PasswordHash = encodedPassword.Hash,
             };
@@ -89,6 +91,7 @@ namespace Investager.Core.Services
             var response = new LoginResponse
             {
                 DisplayName = user.DisplayName,
+                Theme = user.Theme,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
             };
@@ -112,6 +115,14 @@ namespace Investager.Core.Services
         {
             var user = await _unitOfWork.Users.GetByIdWithTracking(userId);
             user.DisplayName = updateUserDto.DisplayName;
+
+            await _unitOfWork.SaveChanges();
+        }
+
+        public async Task UpdateTheme(int userId, Theme theme)
+        {
+            var user = await _unitOfWork.Users.GetByIdWithTracking(userId);
+            user.Theme = theme;
 
             await _unitOfWork.SaveChanges();
         }

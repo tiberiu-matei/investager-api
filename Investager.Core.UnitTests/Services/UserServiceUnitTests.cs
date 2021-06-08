@@ -57,6 +57,7 @@ namespace Investager.Core.UnitTests.Services
                 Id = 1,
                 Email = "abc@a.com",
                 DisplayName = "dorel",
+                Theme = Theme.Dark,
             };
 
             _mockUserRepository.Setup(e => e.Find(It.IsAny<Expression<Func<User, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<User> { user });
@@ -67,6 +68,7 @@ namespace Investager.Core.UnitTests.Services
             // Assert
             userDto.Email.Should().Be(user.Email);
             userDto.DisplayName.Should().Be(user.DisplayName);
+            userDto.Theme.Should().Be(user.Theme);
         }
 
         [Fact]
@@ -135,6 +137,25 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
+        public async Task RegisterUser_SetsCorrectTheme()
+        {
+            // Arrange
+            var email = "Sp3CiAlAddrEss@domAIN.cOm";
+            var registerUser = new RegisterUserDto
+            {
+                Email = email,
+                Password = "123",
+            };
+
+            // Act
+            await _target.Register(registerUser);
+
+            // Assert
+            _mockUserRepository.Verify(e => e.Insert(It.Is<User>(u => u.Theme == Theme.None)), Times.Once);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Exactly(2));
+        }
+
+        [Fact]
         public async Task RegisterUser_GeneratesTokens()
         {
             // Arrange
@@ -188,6 +209,7 @@ namespace Investager.Core.UnitTests.Services
             var user = new User
             {
                 DisplayName = "gigino",
+                Theme = Theme.Dark,
                 Email = "stuff@investager.com",
                 PasswordHash = new byte[] { 31, 155 },
                 PasswordSalt = new byte[] { 101, 2 },
@@ -202,6 +224,7 @@ namespace Investager.Core.UnitTests.Services
 
             // Assert
             response.DisplayName.Should().Be(user.DisplayName);
+            response.Theme.Should().Be(user.Theme);
             response.AccessToken.Should().Be(accessToken);
             response.RefreshToken.Should().Be(refreshToken);
             _mockRefreshTokenRepository.Verify(e => e.Insert(It.Is<RefreshToken>(u => u.EncodedValue == refreshToken)), Times.Once);
@@ -333,20 +356,6 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void Update_WhenUserNotFound_Throws()
-        {
-            // Arrange
-            var errorMessage = "User not found.";
-            _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ThrowsAsync(new Exception(errorMessage));
-
-            // Act
-            Func<Task> act = async () => await _target.Update(1, new UpdateUserDto());
-
-            // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
-        }
-
-        [Fact]
         public async Task Update_ChangesValues()
         {
             // Arrange
@@ -367,6 +376,40 @@ namespace Investager.Core.UnitTests.Services
 
             // Assert
             user.DisplayName.Should().Be(dto.DisplayName);
+            _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        }
+
+        [Fact]
+        public void UpdateTheme_WhenUserNotFound_Throws()
+        {
+            // Arrange
+            var errorMessage = "User not found.";
+            _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ThrowsAsync(new Exception(errorMessage));
+
+            // Act
+            Func<Task> act = async () => await _target.UpdateTheme(1, Theme.Dark);
+
+            // Assert
+            act.Should().Throw<Exception>().WithMessage(errorMessage);
+        }
+
+        [Fact]
+        public async Task UpdateTheme_ChangesValues()
+        {
+            // Arrange
+            var user = new User
+            {
+                DisplayName = "gigino",
+                Email = "stuff@investager.com",
+                Theme = Theme.Light,
+            };
+            _mockUserRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(user);
+
+            // Act
+            await _target.UpdateTheme(1, Theme.Dark);
+
+            // Assert
+            user.Theme.Should().Be(Theme.Dark);
             _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
         }
 

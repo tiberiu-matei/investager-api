@@ -63,6 +63,16 @@ namespace Investager.Api.Controllers
             return NoContent();
         }
 
+        [HttpPut("theme")]
+        public async Task<IActionResult> UpdateTheme([FromBody] UpdateThemeRequest request)
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+
+            await _userService.UpdateTheme(userId, request.Theme);
+
+            return NoContent();
+        }
+
         [HttpDelete]
         public async Task<IActionResult> Delete()
         {

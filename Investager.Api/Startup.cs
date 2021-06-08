@@ -16,6 +16,7 @@ using Polly.Extensions.Http;
 using System;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json.Serialization;
 
 namespace Investager.Api
 {
@@ -60,6 +61,12 @@ namespace Investager.Api
                 e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", Configuration.GetSection("Alpaca")["KeyId"]);
                 e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", Configuration.GetSection("Alpaca")["SecretKey"]);
             }).AddPolicyHandler(GetRetryPolicy());
+
+            services.AddMvc()
+                .AddJsonOptions(e =>
+                {
+                    e.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

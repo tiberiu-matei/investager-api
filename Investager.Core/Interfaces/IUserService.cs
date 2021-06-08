@@ -1,4 +1,5 @@
 ﻿using Investager.Core.Dtos;
+using Investager.Core.Models;
 using System.Threading.Tasks;
 
 namespace Investager.Core.Interfaces
@@ -14,6 +15,8 @@ namespace Investager.Core.Interfaces
         Task<string> RefreshToken(string refreshToken);
 
         Task Update(int userId, UpdateUserDto updateUserDto);
+
+        Task UpdateTheme(int userId, Theme theme);
 
         Task Delete(int userId);
     }
