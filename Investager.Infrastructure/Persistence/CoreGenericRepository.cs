@@ -64,6 +64,15 @@ namespace Investager.Infrastructure.Persistence
             return await query.ToListAsync();
         }
 
+        public async Task<IEnumerable<TEntity>> FindWithTracking(Expression<Func<TEntity, bool>> filter)
+        {
+            IQueryable<TEntity> query = _dbSet;
+
+            query = query.Where(filter);
+
+            return await query.ToListAsync();
+        }
+
         public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy, int take)
         {
             IQueryable<TEntity> query = _dbSet;

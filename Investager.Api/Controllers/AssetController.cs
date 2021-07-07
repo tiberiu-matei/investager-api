@@ -1,4 +1,6 @@
-﻿using Investager.Core.Interfaces;
+﻿using Investager.Core.Constants;
+using Investager.Core.Dtos;
+using Investager.Core.Interfaces;
 using Investager.Core.Models;
 using Investager.Core.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +34,15 @@ namespace Investager.Api.Controllers
             return Ok(assetDtos);
         }
 
+        [HttpGet("starred")]
+        public async Task<IActionResult> GetStarred()
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            var starredAssets = await _assetService.GetStarred(userId);
+
+            return Ok(starredAssets);
+        }
+
         [HttpPost("scan")]
         public async Task<IActionResult> Scan()
         {
@@ -55,6 +66,33 @@ namespace Investager.Api.Controllers
         {
             var dataCollectionService = _dataCollectionServiceFactory.GetService(DataProviders.Alpaca);
             dataCollectionService.Stop();
+
+            return NoContent();
+        }
+
+        [HttpPost("star")]
+        public async Task<IActionResult> Star([FromBody] StarAssetRequest request)
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _assetService.Star(userId, request);
+
+            return NoContent();
+        }
+
+        [HttpPut("stardisplayorder")]
+        public async Task<IActionResult> UpdateStarDisplayOrder([FromBody] StarAssetRequest request)
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _assetService.UpdateStarDisplayOrder(userId, request);
+
+            return NoContent();
+        }
+
+        [HttpDelete("{assetId}/unstar")]
+        public async Task<IActionResult> Unstar(int assetId)
+        {
+            var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
+            await _assetService.Unstar(userId, assetId);
 
             return NoContent();
         }
