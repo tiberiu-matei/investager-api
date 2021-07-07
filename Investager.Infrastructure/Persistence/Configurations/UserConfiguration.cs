@@ -9,6 +9,7 @@ namespace Investager.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<User> builder)
         {
             builder.HasKey(e => e.Id);
+            builder.HasMany(e => e.StarredAssets).WithOne(e => e.User).OnDelete(DeleteBehavior.Cascade);
             builder.Property(e => e.Id).IsRequired();
             builder.Property(e => e.Email).IsRequired();
             builder.Property(e => e.DisplayEmail).IsRequired();

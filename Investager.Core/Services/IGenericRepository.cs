@@ -18,6 +18,8 @@ namespace Investager.Core.Services
 
         Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, int take);
 
+        Task<IEnumerable<TEntity>> FindWithTracking(Expression<Func<TEntity, bool>> filter);
+
         Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy, int take);
 
         void Insert(TEntity entity);

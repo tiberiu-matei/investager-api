@@ -23,6 +23,8 @@ namespace Investager.Core.Models
 
         public float? LastPrice { get; set; }
 
-        public ICollection<PortfolioAsset> PortfolioAssets = new List<PortfolioAsset>();
+        public ICollection<UserStarredAsset> StarredBy { get; set; } = new List<UserStarredAsset>();
+
+        public ICollection<PortfolioAsset> PortfolioAssets { get; set; } = new List<PortfolioAsset>();
     }
 }

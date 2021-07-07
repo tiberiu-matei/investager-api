@@ -15,6 +15,7 @@ namespace Investager.Infrastructure.Persistence
             RefreshTokens = new CoreGenericRepository<RefreshToken>(context);
             Assets = new CoreGenericRepository<Asset>(context);
             Portfolios = new CoreGenericRepository<Portfolio>(context);
+            UserStarredAssets = new CoreGenericRepository<UserStarredAsset>(context);
         }
 
         public IGenericRepository<User> Users { get; }
@@ -24,6 +25,8 @@ namespace Investager.Infrastructure.Persistence
         public IGenericRepository<Asset> Assets { get; }
 
         public IGenericRepository<Portfolio> Portfolios { get; }
+
+        public IGenericRepository<UserStarredAsset> UserStarredAssets { get; }
 
         public Task SaveChanges()
         {

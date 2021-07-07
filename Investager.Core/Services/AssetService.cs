@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
+using Investager.Core.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Investager.Core.Services
@@ -33,6 +35,47 @@ namespace Investager.Core.Services
                     var assets = await _coreUnitOfWork.Assets.GetAll();
                     return _mapper.Map<IEnumerable<AssetSummaryDto>>(assets);
                 });
+        }
+
+        public async Task<IEnumerable<StarredAssetResponse>> GetStarred(int userId)
+        {
+            var starred = await _coreUnitOfWork.UserStarredAssets.Find(e => e.UserId == userId);
+
+            var response = starred.Select(e => new StarredAssetResponse { AssetId = e.AssetId, DisplayOrder = e.DisplayOrder }).ToList();
+
+            return response;
+        }
+
+        public async Task Star(int userId, StarAssetRequest request)
+        {
+            var userStarredAsset = new UserStarredAsset
+            {
+                UserId = userId,
+                AssetId = request.AssetId,
+                DisplayOrder = request.DisplayOrder,
+            };
+
+            _coreUnitOfWork.UserStarredAssets.Insert(userStarredAsset);
+            await _coreUnitOfWork.SaveChanges();
+        }
+
+        public async Task UpdateStarDisplayOrder(int userId, StarAssetRequest request)
+        {
+            var userStarredAssets = await _coreUnitOfWork.UserStarredAssets.FindWithTracking(e => e.UserId == userId && e.AssetId == request.AssetId);
+            var userStarredAsset = userStarredAssets.Single();
+            userStarredAsset.DisplayOrder = request.DisplayOrder;
+
+            await _coreUnitOfWork.SaveChanges();
+        }
+
+        public async Task Unstar(int userId, int assetId)
+        {
+            var userStarredAssets = await _coreUnitOfWork.UserStarredAssets
+                .Find(e => e.UserId == userId && e.AssetId == assetId);
+            var userStarredAsset = userStarredAssets.Single();
+
+            _coreUnitOfWork.UserStarredAssets.Delete(userStarredAsset);
+            await _coreUnitOfWork.SaveChanges();
         }
     }
 }

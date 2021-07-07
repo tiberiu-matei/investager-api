@@ -15,5 +15,7 @@
         public string Industry { get; set; }
 
         public string Currency { get; set; }
+
+        public float? LastPrice { get; set; }
     }
 }
