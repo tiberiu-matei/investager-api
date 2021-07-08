@@ -1,5 +1,6 @@
 ﻿using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Investager.Core.Services
@@ -17,7 +18,16 @@ namespace Investager.Core.Services
 
         public Task<TimeSeriesResponse> Get(string key)
         {
-            return _cache.Get(key, async () => await _timeSeriesRepository.Get(key));
+            return _cache.Get(key, async () => await GetData(key));
+        }
+
+        private async Task<TimeSeriesResponse> GetData(string key)
+        {
+            var response = await _timeSeriesRepository.Get(key);
+
+            response.Points = response.Points.OrderByDescending(e => e.Time);
+
+            return response;
         }
     }
 }
