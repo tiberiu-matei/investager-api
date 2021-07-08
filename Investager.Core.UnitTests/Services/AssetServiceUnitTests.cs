@@ -53,7 +53,7 @@ namespace Investager.Core.UnitTests.Services
             // Assert
             response.Count().Should().Be(1);
             response.Single().Should().Be(dto);
-            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromMinutes(30), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromMinutes(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
         }
 
         [Fact]

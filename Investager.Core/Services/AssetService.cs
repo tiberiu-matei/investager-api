@@ -12,7 +12,7 @@ namespace Investager.Core.Services
     public class AssetService : IAssetService
     {
         private const string AssetDtosCacheKey = "AssetDtos";
-        private static readonly TimeSpan AssetDtosTtl = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan AssetDtosTtl = TimeSpan.FromMinutes(1);
 
         private readonly ICoreUnitOfWork _coreUnitOfWork;
         private readonly IMapper _mapper;
@@ -43,7 +43,7 @@ namespace Investager.Core.Services
 
             var response = starred.Select(e => new StarredAssetResponse { AssetId = e.AssetId, DisplayOrder = e.DisplayOrder }).ToList();
 
-            return response;
+            return response.OrderBy(e => e.DisplayOrder);
         }
 
         public async Task Star(int userId, StarAssetRequest request)
