@@ -2,6 +2,7 @@
 using Investager.Core.Services;
 using Investager.Infrastructure.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,15 +11,18 @@ namespace Investager.Infrastructure.Services
 {
     public class AlpacaDataCollectionService : IDataCollectionService
     {
+        private readonly ILogger<AlpacaDataCollectionService> _logger;
         private readonly IServiceScopeFactory _serviceScopeFactory;
         private readonly AlpacaSettings _alpacaSettings;
 
         private bool _active;
 
         public AlpacaDataCollectionService(
+            ILogger<AlpacaDataCollectionService> logger,
             IServiceScopeFactory serviceScopeFactory,
             AlpacaSettings alpacaSettings)
         {
+            _logger = logger;
             _serviceScopeFactory = serviceScopeFactory;
             _alpacaSettings = alpacaSettings;
         }
@@ -57,14 +61,17 @@ namespace Investager.Infrastructure.Services
 
                 var dataProviderServiceFactory = scope.ServiceProvider.GetRequiredService<IDataProviderServiceFactory>();
                 var alpacaService = dataProviderServiceFactory.CreateService(DataProviders.Alpaca);
+                var key = $"{asset.Exchange}:{asset.Symbol}";
 
                 try
                 {
                     await alpacaService.UpdateTimeSeriesData(asset);
+
+                    _logger.LogInformation($"Updated asset data for Key={key}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error updating asset data. {ex.Message}");
+                    _logger.LogError(ex, $"Error updating asset data for Key={key}");
                 }
 
                 await Task.Delay(_alpacaSettings.PeriodBetweenDataRequests);

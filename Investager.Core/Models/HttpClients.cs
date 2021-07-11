@@ -5,5 +5,7 @@
         public const string AlpacaPaper = "AlpacaPaper";
 
         public const string AlpacaData = "AlpacaData";
+
+        public const string Loki = "Loki";
     }
 }

@@ -1,21 +1,14 @@
 using Investager.Api.Middleware;
 using Investager.Api.Policies;
 using Investager.Core.Mapping;
-using Investager.Core.Models;
 using Investager.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Polly;
-using Polly.Extensions.Http;
-using System;
-using System.Net;
-using System.Net.Http;
+using Serilog;
 using System.Text.Json.Serialization;
 
 namespace Investager.Api
@@ -48,19 +41,7 @@ namespace Investager.Api
                 e.AddPolicy(PolicyNames.User, p => p.Requirements.Add(new AuthenticatedUserRequirement()));
             });
 
-            services.AddHttpClient(HttpClients.AlpacaPaper, e =>
-            {
-                e.BaseAddress = new Uri("https://paper-api.alpaca.markets/");
-                e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", Configuration.GetSection("Alpaca")["KeyId"]);
-                e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", Configuration.GetSection("Alpaca")["SecretKey"]);
-            }).AddPolicyHandler(GetRetryPolicy());
-
-            services.AddHttpClient(HttpClients.AlpacaData, e =>
-            {
-                e.BaseAddress = new Uri("https://data.alpaca.markets/");
-                e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", Configuration.GetSection("Alpaca")["KeyId"]);
-                e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", Configuration.GetSection("Alpaca")["SecretKey"]);
-            }).AddPolicyHandler(GetRetryPolicy());
+            services.AddHttpClients(Configuration);
 
             services.AddMvc()
                 .AddJsonOptions(e =>
@@ -69,12 +50,9 @@ namespace Investager.Api
                 });
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
+            app.UseSerilogRequestLogging();
 
             using var scope = app.ApplicationServices.CreateScope();
             var coreContext = scope.ServiceProvider.GetService<InvestagerCoreContext>();
@@ -103,14 +81,6 @@ namespace Investager.Api
                 endpoints.MapGet("/api/v1/serviceinfo", async context => await context.Response.WriteAsync("Hello from Investager API."));
                 endpoints.MapControllers().RequireAuthorization(PolicyNames.User);
             });
-        }
-
-        private IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
-        {
-            return HttpPolicyExtensions
-                .HandleTransientHttpError()
-                .OrResult(e => e.StatusCode == HttpStatusCode.TooManyRequests)
-                .WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
         }
     }
 }

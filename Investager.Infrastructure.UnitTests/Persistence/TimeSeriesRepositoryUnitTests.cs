@@ -2,6 +2,8 @@
 using Investager.Core.Models;
 using Investager.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +24,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 .UseSqlite("Filename=Test.db")
                 .Options;
 
-            _context = new InvestagerTimeSeriesContext(contextOptions);
+            _context = new InvestagerTimeSeriesContext(new Mock<IConfiguration>().Object, contextOptions);
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
 
