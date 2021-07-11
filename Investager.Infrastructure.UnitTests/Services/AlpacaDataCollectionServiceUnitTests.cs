@@ -4,6 +4,7 @@ using Investager.Core.Services;
 using Investager.Infrastructure.Models;
 using Investager.Infrastructure.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ namespace Investager.Infrastructure.UnitTests.Services
 {
     public class AlpacaDataCollectionServiceUnitTests
     {
+        private readonly Mock<ILogger<AlpacaDataCollectionService>> _mockLogger = new Mock<ILogger<AlpacaDataCollectionService>>();
         private readonly Mock<IDataProviderService> _mockDataProviderService = new Mock<IDataProviderService>();
         private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
         private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
@@ -59,6 +61,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             mockScope.Setup(e => e.ServiceProvider).Returns(mockServiceProvider.Object);
 
             _target = new AlpacaDataCollectionService(
+                _mockLogger.Object,
                 mockServiceScopeFactory.Object,
                 _alpacaSettings);
         }

@@ -1,5 +1,6 @@
 ﻿using Investager.Api.Policies;
 using Investager.Core.Interfaces;
+using Investager.Core.Models;
 using Investager.Core.Services;
 using Investager.Infrastructure.Factories;
 using Investager.Infrastructure.Helpers;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Text;
 
 namespace Investager.Api
@@ -34,11 +36,29 @@ namespace Investager.Api
             services.AddSingleton<IDataCollectionServiceFactory, DataCollectionServiceFactory>();
             services.AddSingleton<ICache, Cache>();
             services.AddSingleton(new AlpacaSettings());
+            services.AddSingleton(new LokiSettings());
 
             var secretKey = configuration["JwtSecretKey"];
             var signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(secretKey));
             var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
             services.AddSingleton(signingCredentials);
+        }
+
+        public static void AddHttpClients(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHttpClient(HttpClients.AlpacaPaper, e =>
+            {
+                e.BaseAddress = new Uri("https://paper-api.alpaca.markets/");
+                e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", configuration.GetSection("Alpaca")["KeyId"]);
+                e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", configuration.GetSection("Alpaca")["SecretKey"]);
+            }).AddPolicyHandler(PollyPolicies.GetRetryPolicy());
+
+            services.AddHttpClient(HttpClients.AlpacaData, e =>
+            {
+                e.BaseAddress = new Uri("https://data.alpaca.markets/");
+                e.DefaultRequestHeaders.Add("APCA-API-KEY-ID", configuration.GetSection("Alpaca")["KeyId"]);
+                e.DefaultRequestHeaders.Add("APCA-API-SECRET-KEY", configuration.GetSection("Alpaca")["SecretKey"]);
+            }).AddPolicyHandler(PollyPolicies.GetRetryPolicy());
         }
     }
 }
