@@ -73,7 +73,6 @@ namespace Investager.Infrastructure.Logging
             {
                 _lokiStream = new Dictionary<string, string>
                 {
-                    { "source", "Investager.Api" },
                     { "host", Dns.GetHostName() },
                     { "env", _configuration[ConfigKeys.Environment] }
                 };
