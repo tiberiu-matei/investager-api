@@ -5,10 +5,8 @@ using Newtonsoft.Json;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
-using Serilog.Formatting;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -18,15 +16,12 @@ using System.Threading.Tasks;
 
 namespace Investager.Infrastructure.Logging
 {
-    public class LokiSink : ILogEventSink, IAsyncDisposable
+    public class LokiSink : ILogEventSink, IDisposable
     {
-        private const int DefaultWriteBufferCapacity = 256;
-
         private readonly IConfiguration _configuration;
-        private readonly ITextFormatter _textFormatter;
+        private readonly ILokiFormatter _lokiFormatter;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly TimeSpan _batchInterval;
-        private readonly int _maxBatchSize;
+        private readonly LokiSettings _lokiSettings;
         private readonly object _logsLock = new object();
         private readonly long _unixEpochTicks;
         private readonly List<LogEvent> _logs = new List<LogEvent>();
@@ -36,15 +31,14 @@ namespace Investager.Infrastructure.Logging
 
         public LokiSink(
             IConfiguration configuration,
-            ITextFormatter textFormatter,
+            ILokiFormatter lokiFormatter,
             IHttpClientFactory httpClientFactory,
             LokiSettings lokiSettings)
         {
             _configuration = configuration;
-            _textFormatter = textFormatter;
+            _lokiFormatter = lokiFormatter;
             _httpClientFactory = httpClientFactory;
-            _batchInterval = lokiSettings.BatchInterval;
-            _maxBatchSize = lokiSettings.MaxBatchSize;
+            _lokiSettings = lokiSettings;
 
             _unixEpochTicks = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).Ticks;
 
@@ -59,11 +53,11 @@ namespace Investager.Infrastructure.Logging
             }
         }
 
-        public async ValueTask DisposeAsync()
+        public void Dispose()
         {
             _cancellationTokenSource.Cancel();
 
-            await SendLogs();
+            SendLogs().GetAwaiter().GetResult();
         }
 
         private void Start()
@@ -79,7 +73,7 @@ namespace Investager.Infrastructure.Logging
 
                 while (!_cancellationTokenSource.IsCancellationRequested)
                 {
-                    await Task.Delay(_batchInterval);
+                    await Task.Delay(_lokiSettings.BatchInterval);
 
                     await SendLogs();
                 }
@@ -93,9 +87,9 @@ namespace Investager.Infrastructure.Logging
             {
                 if (_logs.Any())
                 {
-                    for (var i = 0; i < _logs.Count; i += _maxBatchSize)
+                    for (var i = 0; i < _logs.Count; i += _lokiSettings.MaxBatchSize)
                     {
-                        batches.Add(_logs.GetRange(i, Math.Min(_maxBatchSize, _logs.Count - i)));
+                        batches.Add(_logs.GetRange(i, Math.Min(_lokiSettings.MaxBatchSize, _logs.Count - i)));
                     }
 
                     _logs.Clear();
@@ -143,9 +137,7 @@ namespace Investager.Infrastructure.Logging
             {
                 var unixEpochNs = ((log.Timestamp.UtcTicks - _unixEpochTicks) * 100).ToString();
 
-                var buffer = new StringWriter(new StringBuilder(DefaultWriteBufferCapacity));
-                _textFormatter.Format(log, buffer);
-                var logLine = buffer.ToString();
+                var logLine = _lokiFormatter.Format(log);
 
                 return new string[2] { unixEpochNs, logLine };
             }).ToList();

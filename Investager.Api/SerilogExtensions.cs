@@ -6,9 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Serilog.Configuration;
-using Serilog.Formatting.Display;
 using System;
-using System.Globalization;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -40,8 +38,7 @@ namespace Investager.Api
 
             var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
 
-            var template = "Level={Level} {Message}{NewLine}{Exception}";
-            var formatter = new MessageTemplateTextFormatter(template, CultureInfo.InvariantCulture);
+            var formatter = new LokiFormatter();
 
             return loggerConfiguration.Sink(new LokiSink(configuration, formatter, httpClientFactory, lokiSettings));
         }

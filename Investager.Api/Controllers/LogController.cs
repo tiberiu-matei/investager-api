@@ -1,7 +1,7 @@
-﻿using Investager.Infrastructure.Models;
+﻿using Investager.Infrastructure.Logging;
+using Investager.Infrastructure.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Serilog.Events;
 
 namespace Investager.Api.Controllers
 {
@@ -21,18 +21,22 @@ namespace Investager.Api.Controllers
         {
             switch (request.Level)
             {
-                case LogEventLevel.Error:
+                case UILogLevel.Information:
                     _logger.LogInformation(request.Message);
                     break;
-                case LogEventLevel.Warning:
-                    _logger.LogWarning(request.Message);
-                    break;
-                case LogEventLevel.Debug:
+
+                case UILogLevel.Debug:
                     _logger.LogDebug(request.Message);
                     break;
-                case LogEventLevel.Information:
-                case LogEventLevel.Verbose:
-                case LogEventLevel.Fatal:
+
+                case UILogLevel.Warning:
+                    _logger.LogWarning(request.Message);
+                    break;
+
+                case UILogLevel.Error:
+                    _logger.LogError(request.Message);
+                    break;
+
                 default:
                     _logger.LogInformation(request.Message);
                     break;
