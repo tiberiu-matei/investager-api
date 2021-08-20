@@ -32,7 +32,6 @@ namespace Investager.Infrastructure.UnitTests.Services
                 {
                     Id = 1,
                     Symbol = "ZM",
-                    LastPriceUpdate = new DateTime(2020, 02, 02),
                 },
                 new Asset
                 {
@@ -43,7 +42,6 @@ namespace Investager.Infrastructure.UnitTests.Services
                 {
                     Id = 3,
                     Symbol = "ROKU",
-                    LastPriceUpdate = new DateTime(2021, 02, 02),
                 },
             };
 
@@ -54,7 +52,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
             mockServiceScopeFactory.Setup(e => e.CreateScope()).Returns(mockScope.Object);
             var mockServiceProvider = new Mock<IServiceProvider>();
-            _mockAssetRepository.Setup(e => e.GetAllTracked()).ReturnsAsync(_assets);
+            _mockAssetRepository.Setup(e => e.GetAll()).ReturnsAsync(_assets);
             _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
             mockServiceProvider.Setup(e => e.GetService(typeof(IDataProviderServiceFactory))).Returns(mockFactory.Object);
             mockServiceProvider.Setup(e => e.GetService(typeof(ICoreUnitOfWork))).Returns(_mockCoreUnitOfWork.Object);
@@ -77,7 +75,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
@@ -93,7 +91,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             await Task.Delay(500);
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<string>(), It.IsAny<string>()), Times.Once);
         }
 
         [Fact]
@@ -108,23 +106,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Exactly(2));
-        }
-
-        [Fact]
-        public async Task Task_OrdersAssetsByLastDateModified_BeforeCallingService()
-        {
-            // Arrange
-            _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(1000);
-
-            // Act
-            _target.Start();
-            await Task.Delay(200);
-            _target.Stop();
-
-            // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Once);
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.Is<Asset>(e => e.Id == 2)), Times.Once);
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(2));
         }
 
         [Fact]
@@ -140,7 +122,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Exactly(6));
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(6));
         }
 
         [Fact]
@@ -148,7 +130,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         {
             // Arrange
             _alpacaSettings.PeriodBetweenDataRequests = TimeSpan.FromMilliseconds(1);
-            _mockDataProviderService.Setup(e => e.UpdateTimeSeriesData(It.IsAny<Asset>())).Throws(new Exception("big boomer."));
+            _mockDataProviderService.Setup(e => e.UpdateTimeSeriesData(It.IsAny<string>(), It.IsAny<string>())).Throws(new Exception("big boomer."));
 
             // Act
             _target.Start();
@@ -156,7 +138,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             _target.Stop();
 
             // Assert
-            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<Asset>()), Times.Exactly(3));
+            _mockDataProviderService.Verify(e => e.UpdateTimeSeriesData(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(3));
         }
     }
 }

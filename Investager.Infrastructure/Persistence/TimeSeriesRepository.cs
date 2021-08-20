@@ -12,15 +12,19 @@ namespace Investager.Infrastructure.Persistence
     public class TimeSeriesRepository : ITimeSeriesRepository
     {
         private readonly InvestagerTimeSeriesContext _context;
+        private readonly IDbContextFactory<InvestagerTimeSeriesContext> _contextFactory;
 
-        public TimeSeriesRepository(InvestagerTimeSeriesContext context)
+        public TimeSeriesRepository(InvestagerTimeSeriesContext context, IDbContextFactory<InvestagerTimeSeriesContext> contextFactory)
         {
             _context = context;
+            _contextFactory = contextFactory;
         }
 
         public async Task<TimeSeriesResponse> Get(string key)
         {
-            var points = await _context.TimeSeriesPoints
+            using var readContext = _contextFactory.CreateDbContext();
+
+            var points = await readContext.TimeSeriesPoints
                 .Where(e => e.Key == key)
                 .Select(e => new TimePointResponse { Time = e.Time, Value = e.Value })
                 .ToListAsync();

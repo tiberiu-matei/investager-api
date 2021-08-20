@@ -20,7 +20,7 @@ namespace Investager.Api.Controllers
         {
             var response = await _timeSeriesService.Get(key);
 
-            return Ok(response);
+            return Ok(response.Points);
         }
     }
 }

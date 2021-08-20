@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
 using Investager.Core.Models;
 using Investager.Core.Services;
@@ -25,6 +26,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         private readonly Mock<ITimeSeriesRepository> _mockTimeSeriesRepository = new Mock<ITimeSeriesRepository>();
         private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
         private readonly Mock<ICache> _mockCache = new Mock<ICache>();
+        private readonly Mock<ITimeSeriesService> _mockTimeSeriesService = new Mock<ITimeSeriesService>();
         private readonly Asset _asset;
 
         private readonly AlpacaService _target;
@@ -58,7 +60,8 @@ namespace Investager.Infrastructure.UnitTests.Services
                 _mockCoreUnitOfWork.Object,
                 _mockTimeSeriesRepository.Object,
                 _mockTimeHelper.Object,
-                _mockCache.Object);
+                _mockCache.Object,
+                _mockTimeSeriesService.Object);
         }
 
         [Fact]
@@ -159,6 +162,10 @@ namespace Investager.Infrastructure.UnitTests.Services
                 Content = new StringContent("Retry back later."),
             };
 
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { Points = new List<TimePointResponse>() });
+
             _mockHttpMessageHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
@@ -168,7 +175,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            Func<Task> act = async () => await _target.UpdateTimeSeriesData(_asset);
+            Func<Task> act = async () => await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
 
             // Assert
             act.Should().Throw<HttpRequestException>();
@@ -177,7 +184,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         }
 
         [Fact]
-        public async Task UpdateTimeSeriesData_AlpacaUrl_IsBuiltCorrectly_AndLastPriceUpdatedChanged()
+        public async Task UpdateTimeSeriesData_WhenNoPreviousData_AlpacaUrl_IsBuiltCorrectly()
         {
             // Arrange
             var timeNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
@@ -190,6 +197,10 @@ namespace Investager.Infrastructure.UnitTests.Services
                 Content = new StringContent(responseContent),
             };
 
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { Points = new List<TimePointResponse>() });
+
             _mockHttpMessageHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
@@ -199,7 +210,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            await _target.UpdateTimeSeriesData(_asset);
+            await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
 
             // Assert
             _mockHttpMessageHandler
@@ -209,9 +220,57 @@ namespace Investager.Infrastructure.UnitTests.Services
                     Times.Once(),
                     ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
+        }
 
-            _mockAssetRepository.Verify(e => e.Update(It.Is<Asset>(e => e.LastPriceUpdate == new DateTime(2021, 04, 11, 11, 16, 33, DateTimeKind.Utc))), Times.Once);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        [Fact]
+        public async Task UpdateTimeSeriesData_WithPreviousData_AlpacaUrl_IsBuiltCorrectly()
+        {
+            // Arrange
+            var timeNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
+            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(timeNow);
+
+            var responseContent = File.ReadAllText("TestData/AlpacaGetStockDataExample.json");
+            var response = new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(responseContent),
+            };
+
+            var existingPoints = new List<TimePointResponse>
+            {
+                new TimePointResponse
+                {
+                    Time = new DateTime(2021, 02, 02, 13, 37, 0, DateTimeKind.Utc),
+                },
+                new TimePointResponse
+                {
+                    Time = new DateTime(2020, 04, 20, 13, 37, 0, DateTimeKind.Utc),
+                },
+            };
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { Points = existingPoints });
+
+            _mockHttpMessageHandler
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(response);
+
+            // Act
+            await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
+
+            // Assert
+            _mockHttpMessageHandler
+                .Protected()
+                .Verify(
+                    "SendAsync",
+                    Times.Once(),
+                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2021-02-02T13:37:00.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
+                    ItExpr.IsAny<CancellationToken>());
         }
 
         [Fact]
@@ -228,6 +287,10 @@ namespace Investager.Infrastructure.UnitTests.Services
                 Content = new StringContent(responseContent),
             };
 
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { Points = new List<TimePointResponse>() });
+
             _mockHttpMessageHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
@@ -237,7 +300,7 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .ReturnsAsync(response);
 
             // Act
-            await _target.UpdateTimeSeriesData(_asset);
+            await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
 
             // Assert
             _mockHttpMessageHandler

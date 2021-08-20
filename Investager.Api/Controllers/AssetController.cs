@@ -26,12 +26,12 @@ namespace Investager.Api.Controllers
             _assetService = assetService;
         }
 
-        [HttpGet("all")]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("search/{searchText}")]
+        public async Task<IActionResult> Search(string searchText, [FromQuery] int max)
         {
-            var assetDtos = await _assetService.GetAll();
+            var response = await _assetService.Search(searchText, max);
 
-            return Ok(assetDtos);
+            return Ok(response);
         }
 
         [HttpGet("starred")]

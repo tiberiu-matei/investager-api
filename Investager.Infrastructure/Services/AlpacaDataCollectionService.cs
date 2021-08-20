@@ -4,7 +4,6 @@ using Investager.Infrastructure.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Investager.Infrastructure.Services
@@ -49,10 +48,9 @@ namespace Investager.Infrastructure.Services
         {
             using var scope = _serviceScopeFactory.CreateScope();
             var coreUnitOfWork = scope.ServiceProvider.GetRequiredService<ICoreUnitOfWork>();
-            var assets = await coreUnitOfWork.Assets.GetAllTracked();
-            var orderedAssets = assets.OrderBy(e => e.LastPriceUpdate).ToList();
+            var assets = await coreUnitOfWork.Assets.GetAll();
 
-            foreach (var asset in orderedAssets)
+            foreach (var asset in assets)
             {
                 if (!_active)
                 {
@@ -65,7 +63,7 @@ namespace Investager.Infrastructure.Services
 
                 try
                 {
-                    await alpacaService.UpdateTimeSeriesData(asset);
+                    await alpacaService.UpdateTimeSeriesData(asset.Exchange, asset.Symbol);
 
                     _logger.LogInformation($"Updated asset data for Key={key}");
                 }

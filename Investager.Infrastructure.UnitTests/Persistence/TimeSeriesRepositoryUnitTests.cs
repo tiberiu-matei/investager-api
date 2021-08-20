@@ -15,6 +15,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
     public class TimeSeriesRepositoryUnitTests
     {
         private readonly InvestagerTimeSeriesContext _context;
+        private readonly Mock<IDbContextFactory<InvestagerTimeSeriesContext>> _mockContextFactory = new Mock<IDbContextFactory<InvestagerTimeSeriesContext>>();
 
         private readonly TimeSeriesRepository _target;
 
@@ -28,7 +29,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
 
-            _target = new TimeSeriesRepository(_context);
+            _target = new TimeSeriesRepository(_context, _mockContextFactory.Object);
         }
 
         [Fact]

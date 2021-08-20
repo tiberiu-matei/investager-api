@@ -121,20 +121,6 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void Create_WhenSaveChangesThrows_Throws()
-        {
-            // Arrange
-            var errorMessage = "Unable to save.";
-            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
-
-            // Act
-            Func<Task> act = async () => await _target.Create(1, new UpdatePortfolioDto { AssetIds = new List<int>() });
-
-            // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
-        }
-
-        [Fact]
         public async Task Create_AddsNewItem()
         {
             // Arrange
@@ -168,34 +154,6 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void Update_WhenSaveChangesThrows_Throws()
-        {
-            // Arrange
-            var existingPortfolio = new Portfolio
-            {
-                Id = 3,
-                Name = "dhura",
-                PortfolioAssets = new List<PortfolioAsset>
-                {
-                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
-                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
-                },
-                UserId = 5,
-            };
-
-            _mockPortfolioRepository.Setup(e => e.Find(It.IsAny<Expression<Func<Portfolio, bool>>>(), It.IsAny<string>())).ReturnsAsync(new List<Portfolio> { existingPortfolio });
-
-            var errorMessage = "Unable to save.";
-            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
-
-            // Act
-            Func<Task> act = async () => await _target.Update(existingPortfolio.UserId, existingPortfolio.Id, new UpdatePortfolioDto { AssetIds = new List<int>() });
-
-            // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
-        }
-
-        [Fact]
         public async Task Update_ChangesProperties()
         {
             // Arrange
@@ -226,34 +184,6 @@ namespace Investager.Core.UnitTests.Services
             existingPortfolio.Name.Should().Be(dto.Name);
             existingPortfolio.PortfolioAssets.Count.Should().Be(3);
             _mockUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
-        }
-
-        [Fact]
-        public void Delete_WhenSaveChangesThrows_Throws()
-        {
-            // Arrange
-            var existingPortfolio = new Portfolio
-            {
-                Id = 3,
-                Name = "dhura",
-                PortfolioAssets = new List<PortfolioAsset>
-                {
-                    new PortfolioAsset { PortfolioId = 3, AssetId = 5 },
-                    new PortfolioAsset { PortfolioId = 3, AssetId = 11 },
-                },
-                UserId = 5,
-            };
-
-            _mockPortfolioRepository.Setup(e => e.GetByIdWithTracking(It.IsAny<int>())).ReturnsAsync(existingPortfolio);
-
-            var errorMessage = "Unable to save.";
-            _mockUnitOfWork.Setup(e => e.SaveChanges()).ThrowsAsync(new Exception(errorMessage));
-
-            // Act
-            Func<Task> act = async () => await _target.Delete(existingPortfolio.UserId, existingPortfolio.Id);
-
-            // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
         }
 
         [Fact]

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Investager.Core.Models
 {
@@ -18,10 +17,6 @@ namespace Investager.Core.Models
         public string Industry { get; set; }
 
         public string Currency { get; set; }
-
-        public DateTime LastPriceUpdate { get; set; }
-
-        public float? LastPrice { get; set; }
 
         public ICollection<UserStarredAsset> StarredBy { get; set; } = new List<UserStarredAsset>();
 

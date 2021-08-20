@@ -5,6 +5,6 @@ namespace Investager.Core.Interfaces
 {
     public interface ITimeSeriesService
     {
-        Task<TimeSeriesResponse> Get(string key);
+        Task<TimeSeriesSummary> Get(string key);
     }
 }

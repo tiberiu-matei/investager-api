@@ -6,7 +6,7 @@ namespace Investager.Core.Interfaces
 {
     public interface IAssetService
     {
-        Task<IEnumerable<AssetSummaryDto>> GetAll();
+        Task<AssetSearchResponse> Search(string text, int max);
 
         Task<IEnumerable<StarredAssetResponse>> GetStarred(int userId);
 
