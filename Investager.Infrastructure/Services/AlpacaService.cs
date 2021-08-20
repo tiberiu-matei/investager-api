@@ -1,4 +1,5 @@
-﻿using Investager.Core.Interfaces;
+﻿using Investager.Core.Constants;
+using Investager.Core.Interfaces;
 using Investager.Core.Models;
 using Investager.Core.Services;
 using Investager.Infrastructure.Models;
@@ -20,19 +21,22 @@ namespace Investager.Infrastructure.Services
         private readonly ITimeSeriesRepository _timeSeriesRepository;
         private readonly ITimeHelper _timeHelper;
         private readonly ICache _cache;
+        private readonly ITimeSeriesService _timeSeriesService;
 
         public AlpacaService(
             IHttpClientFactory httpClientFactory,
             ICoreUnitOfWork coreUnitOfWork,
             ITimeSeriesRepository timeSeriesPointRepository,
             ITimeHelper timeHelper,
-            ICache cache)
+            ICache cache,
+            ITimeSeriesService timeSeriesService)
         {
             _httpClientFactory = httpClientFactory;
             _coreUnitOfWork = coreUnitOfWork;
             _timeSeriesRepository = timeSeriesPointRepository;
             _timeHelper = timeHelper;
             _cache = cache;
+            _timeSeriesService = timeSeriesService;
         }
 
         public async Task<IEnumerable<Asset>> ScanAssets()
@@ -67,18 +71,22 @@ namespace Investager.Infrastructure.Services
             if (addedAssets.Any())
             {
                 await _coreUnitOfWork.SaveChanges();
+                await _cache.Clear(CacheKeys.AssetDtos);
             }
 
             return addedAssets;
         }
 
-        public async Task UpdateTimeSeriesData(Asset asset)
+        public async Task UpdateTimeSeriesData(string exchange, string symbol)
         {
             var utcNow = _timeHelper.GetUtcNow();
 
             var earliestAllowedTime = new DateTime(utcNow.Ticks - new DateTime(MaxHistoryYears + 1, 1, 1).Ticks, DateTimeKind.Utc).AddMinutes(1);
 
-            var from = asset.LastPriceUpdate;
+            var key = $"{exchange}:{symbol}";
+            var timeSeries = await _timeSeriesService.Get(key);
+
+            var from = timeSeries.Points.FirstOrDefault()?.Time ?? DateTime.MinValue;
             if (from < earliestAllowedTime)
             {
                 from = earliestAllowedTime;
@@ -93,22 +101,15 @@ namespace Investager.Infrastructure.Services
 
             var client = _httpClientFactory.CreateClient(HttpClients.AlpacaData);
             var queryString = $"start={from:O}&end={to:O}&timeframe=1Day&limit=10000";
-            var barsResponse = await client.GetFromJsonAsync<AlpacaBarsResponse>($"v2/stocks/{asset.Symbol}/bars?{queryString}") ?? new AlpacaBarsResponse();
+            var barsResponse = await client.GetFromJsonAsync<AlpacaBarsResponse>($"v2/stocks/{symbol}/bars?{queryString}") ?? new AlpacaBarsResponse();
 
             if (barsResponse.Bars.Any())
             {
-                var key = $"{asset.Exchange}:{asset.Symbol}";
                 var assetPrices = barsResponse.Bars.Select(e => new TimeSeriesPoint { Time = e.Time, Key = key, Value = e.Close }).ToList();
                 await _timeSeriesRepository.InsertRange(assetPrices);
 
                 await _cache.Clear(key);
-
-                asset.LastPrice = assetPrices.Last().Value;
             }
-
-            asset.LastPriceUpdate = to;
-            _coreUnitOfWork.Assets.Update(asset);
-            await _coreUnitOfWork.SaveChanges();
         }
     }
 }

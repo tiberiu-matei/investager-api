@@ -16,6 +16,6 @@
 
         public string Currency { get; set; }
 
-        public float? LastPrice { get; set; }
+        public GainLossResponse GainLoss { get; set; }
     }
 }

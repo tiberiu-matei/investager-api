@@ -34,29 +34,38 @@ namespace Investager.Api.UnitTests.Controllers
         }
 
         [Fact]
-        public async Task GetAll_ReturnsExpectedDtos()
+        public async Task Search_ReturnsExpectedData()
         {
             // Arrange
-            var dto = new AssetSummaryDto
+            var assetSearchResponse = new AssetSearchResponse
             {
-                Symbol = "ZM",
-                Exchange = "NASDAQ",
-                Name = "Zoooom",
+                Assets = new List<AssetSummaryDto>
+                {
+                    new AssetSummaryDto
+                    {
+                        Symbol = "NVDA",
+                        Exchange = "NASDAQ",
+                        Name = "Nvidia",
+                    },
+                },
+                MoreRecordsAvailable = true,
             };
 
-            _mockAssetService.Setup(e => e.GetAll()).ReturnsAsync(new List<AssetSummaryDto> { dto });
+            var searchText = "abc";
+            var max = 11;
+
+            _mockAssetService.Setup(e => e.Search(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(assetSearchResponse);
 
             // Act
-            var response = await _target.GetAll();
+            var response = await _target.Search(searchText, max);
 
             // Assert
-            _mockAssetService.Verify(e => e.GetAll(), Times.Once);
+            _mockAssetService.Verify(e => e.Search(searchText, max), Times.Once);
 
             var result = response as OkObjectResult;
-            var value = result.Value as IEnumerable<AssetSummaryDto>;
+            var value = result.Value as AssetSearchResponse;
             result.StatusCode.Should().Be(200);
-            value.Count().Should().Be(1);
-            value.First().Should().Be(dto);
+            value.Should().Be(assetSearchResponse);
         }
 
         [Fact]

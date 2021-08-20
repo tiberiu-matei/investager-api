@@ -27,12 +27,17 @@ namespace Investager.Api.UnitTests.Controllers
         {
             // Arrange
             var key = "NASDAQ:ZM";
-            var timeSeries = new TimeSeriesResponse
+            var timeSeries = new TimeSeriesSummary
             {
                 Key = key,
                 Points = new List<TimePointResponse>
                 {
                     new TimePointResponse { Time = new DateTime(2021, 02, 02), Value = 103.5f },
+                },
+                GainLoss = new GainLossResponse
+                {
+                    Last2Weeks = 35.3f,
+                    LastYear = -88.91f,
                 },
             };
 
@@ -43,9 +48,9 @@ namespace Investager.Api.UnitTests.Controllers
 
             // Assert
             var result = response as OkObjectResult;
-            var value = result.Value as TimeSeriesResponse;
+            var value = result.Value as IEnumerable<TimePointResponse>;
             result.StatusCode.Should().Be(200);
-            value.Should().Be(timeSeries);
+            value.Should().BeEquivalentTo(timeSeries.Points);
         }
     }
 }

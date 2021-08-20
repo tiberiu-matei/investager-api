@@ -19,6 +19,8 @@ namespace Investager.Core.UnitTests.Services
         private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
         private readonly Mock<IMapper> _mockMapper = new Mock<IMapper>();
         private readonly Mock<ICache> _mockCache = new Mock<ICache>();
+        private readonly Mock<ITimeSeriesService> _mockTimeSeriesService = new Mock<ITimeSeriesService>();
+        private readonly Mock<IFuzzyMatch> _mockFuzzyMatch = new Mock<IFuzzyMatch>();
 
         private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
         private readonly Mock<IGenericRepository<UserStarredAsset>> _mockUserStarredAssetRepository = new Mock<IGenericRepository<UserStarredAsset>>();
@@ -30,45 +32,447 @@ namespace Investager.Core.UnitTests.Services
             _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
             _mockCoreUnitOfWork.Setup(e => e.UserStarredAssets).Returns(_mockUserStarredAssetRepository.Object);
 
-            _target = new AssetService(_mockCoreUnitOfWork.Object, _mockMapper.Object, _mockCache.Object);
+            _target = new AssetService(
+                _mockCoreUnitOfWork.Object,
+                _mockMapper.Object,
+                _mockCache.Object,
+                _mockTimeSeriesService.Object,
+                _mockFuzzyMatch.Object);
         }
 
         [Fact]
-        public async Task GetAll_ReturnsExpectedDtos()
+        public async Task Search_CachesAssetSummariesCorrectly()
         {
             // Arrange
-            var dto = new AssetSummaryDto
+            var assets = new List<Asset>
             {
-                Symbol = "ZM",
-                Exchange = "NASDAQ",
-                Name = "Zoooom",
+                new Asset
+                {
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                },
+                new Asset
+                {
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
             };
 
-            _mockCache.Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
-                .ReturnsAsync(new List<AssetSummaryDto> { dto });
+            var summaries = new List<AssetSummaryDto>
+            {
+                new AssetSummaryDto
+                {
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                },
+                new AssetSummaryDto
+                {
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
+            };
+
+            _mockAssetRepository
+                .Setup(e => e.GetAll())
+                .ReturnsAsync(assets);
+
+            _mockMapper
+                .Setup(e => e.Map<IEnumerable<AssetSummaryDto>>(assets))
+                .Returns(summaries);
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = new GainLossResponse() });
+
+            Func<Task<IEnumerable<AssetSummaryDto>>> getDataFunc = null;
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(new List<AssetSummaryDto>())
+                .Callback((string key, TimeSpan ttl, Func<Task<IEnumerable<AssetSummaryDto>>> func) => getDataFunc = func);
 
             // Act
-            var response = await _target.GetAll();
+            await _target.Search("abc", 10);
+            var response = await getDataFunc();
 
             // Assert
-            response.Count().Should().Be(1);
-            response.Single().Should().Be(dto);
-            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromMinutes(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            response.Count().Should().Be(2);
+            response.Should().BeEquivalentTo(summaries);
+            _mockAssetRepository.Verify(e => e.GetAll(), Times.Once);
+            _mockMapper.Verify(e => e.Map<IEnumerable<AssetSummaryDto>>(assets), Times.Once);
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
         }
 
         [Fact]
-        public void GetStarred_WhenRepositoryThrows_Throws()
+        public async Task Search_WhenNoEntries_ReturnsEmptyList()
         {
             // Arrange
-            var errorMessage = "big oof";
-            _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ThrowsAsync(new Exception(errorMessage));
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(new List<AssetSummaryDto>());
 
             // Act
-            Func<Task> act = async () => await _target.GetStarred(5);
+            var response = await _target.Search("abc", 1);
 
             // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
+            response.Assets.Count().Should().Be(0);
+            response.MoreRecordsAvailable.Should().BeFalse();
+
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockFuzzyMatch.Verify(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Search_WhenNoMatches_ReturnsEmptyList()
+        {
+            // Arrange
+            var summaries = new List<AssetSummaryDto>
+            {
+                new AssetSummaryDto
+                {
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                },
+                new AssetSummaryDto
+                {
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
+            };
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(3);
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(summaries);
+
+            // Act
+            var response = await _target.Search("abc", 1);
+
+            // Assert
+            response.Assets.Count().Should().Be(0);
+            response.MoreRecordsAvailable.Should().BeFalse();
+
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockFuzzyMatch.Verify(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(4));
+        }
+
+        [Fact]
+        public async Task Search_PrioritizesSymbolsByMatches()
+        {
+            // Arrange
+            var searchText = "abc";
+            var max = 2;
+
+            var summaries = new List<AssetSummaryDto>
+            {
+                new AssetSummaryDto
+                {
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                },
+                new AssetSummaryDto
+                {
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
+                new AssetSummaryDto
+                {
+                    Symbol = "PATH",
+                    Exchange = "NYSE",
+                    Name = "UIPath",
+                },
+            };
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Symbol))
+                .Returns(1);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Name))
+                .Returns(10);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Symbol))
+                .Returns(2);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Name))
+                .Returns(10);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[2].Symbol))
+                .Returns(0);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[2].Name))
+                .Returns(10);
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(summaries);
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = new GainLossResponse() });
+
+            // Act
+            var response = await _target.Search(searchText, max);
+
+            // Assert
+            response.Assets.Count().Should().Be(2);
+            response.Assets.ToArray()[0].Symbol.Should().Be("PATH");
+            response.Assets.ToArray()[1].Symbol.Should().Be("Z");
+            response.MoreRecordsAvailable.Should().BeTrue();
+
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockFuzzyMatch.Verify(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(6));
+        }
+
+        [Fact]
+        public async Task Search_PrioritizesNamesByMatches()
+        {
+            // Arrange
+            var searchText = "abc";
+            var max = 2;
+
+            var summaries = new List<AssetSummaryDto>
+            {
+                new AssetSummaryDto
+                {
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                },
+                new AssetSummaryDto
+                {
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
+                new AssetSummaryDto
+                {
+                    Symbol = "PATH",
+                    Exchange = "NYSE",
+                    Name = "UIPath",
+                },
+            };
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Symbol))
+                .Returns(10);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Name))
+                .Returns(1);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Symbol))
+                .Returns(10);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Name))
+                .Returns(2);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[2].Symbol))
+                .Returns(10);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[2].Name))
+                .Returns(0);
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(summaries);
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = new GainLossResponse() });
+
+            // Act
+            var response = await _target.Search(searchText, max);
+
+            // Assert
+            response.Assets.Count().Should().Be(2);
+            response.Assets.ToArray()[0].Symbol.Should().Be("PATH");
+            response.Assets.ToArray()[1].Symbol.Should().Be("Z");
+            response.MoreRecordsAvailable.Should().BeTrue();
+
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockFuzzyMatch.Verify(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(6));
+        }
+
+        [Fact]
+        public async Task Search_PrioritizesSymbolMatches()
+        {
+            // Arrange
+            var searchText = "abc";
+            var max = 3;
+
+            var summaries = new List<AssetSummaryDto>
+            {
+                new AssetSummaryDto
+                {
+                    Id = 131,
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                },
+                new AssetSummaryDto
+                {
+                    Id = 385,
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
+                new AssetSummaryDto
+                {
+                    Id = 222,
+                    Symbol = "PATH",
+                    Exchange = "NYSE",
+                    Name = "UIPath",
+                },
+                new AssetSummaryDto
+                {
+                    Id = 104,
+                    Symbol = "BOKU",
+                    Exchange = "LSE",
+                    Name = "Boku",
+                },
+            };
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Symbol))
+                .Returns(1);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Name))
+                .Returns(0);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Symbol))
+                .Returns(10);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Name))
+                .Returns(1);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[2].Symbol))
+                .Returns(2);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[2].Name))
+                .Returns(2);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[3].Symbol))
+                .Returns(10);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[3].Name))
+                .Returns(2);
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(summaries);
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = new GainLossResponse() });
+
+            // Act
+            var response = await _target.Search(searchText, max);
+
+            // Assert
+            response.Assets.Count().Should().Be(3);
+            response.Assets.ToArray()[0].Symbol.Should().Be("Z");
+            response.Assets.ToArray()[1].Symbol.Should().Be("PATH");
+            response.Assets.ToArray()[2].Symbol.Should().Be("SE");
+            response.MoreRecordsAvailable.Should().BeTrue();
+
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockFuzzyMatch.Verify(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(8));
+        }
+
+        [Fact]
+        public async Task Search_MapsGainLoss()
+        {
+            // Arrange
+            var searchText = "z";
+            var max = 3;
+
+            var summaries = new List<AssetSummaryDto>
+            {
+                new AssetSummaryDto
+                {
+                    Id = 131,
+                    Symbol = "Z",
+                    Exchange = "NASDAQ",
+                    Name = "Zillow",
+                    Key = "NASDAQ:Z",
+                },
+                new AssetSummaryDto
+                {
+                    Id = 385,
+                    Symbol = "ZM",
+                    Exchange = "NASDAQ",
+                    Name = "Zoom",
+                    Key = "NASDAQ:ZM",
+                },
+            };
+
+            var gainLoss1 = new GainLossResponse
+            {
+                Last3Days = 123.5f,
+            };
+
+            var gainLoss2 = new GainLossResponse
+            {
+                Last2Weeks = 385.11f,
+            };
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Symbol))
+                .Returns(0);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[0].Name))
+                .Returns(0);
+
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Symbol))
+                .Returns(1);
+            _mockFuzzyMatch
+                .Setup(e => e.Compute(searchText, summaries.ToArray()[1].Name))
+                .Returns(1);
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
+                .ReturnsAsync(summaries);
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(summaries.ToArray()[0].Key))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss1 });
+            _mockTimeSeriesService
+                .Setup(e => e.Get(summaries.ToArray()[1].Key))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss2 });
+
+            // Act
+            var response = await _target.Search(searchText, max);
+
+            // Assert
+            response.Assets.Count().Should().Be(2);
+
+            response.Assets.ToArray()[0].Symbol.Should().Be("Z");
+            response.Assets.ToArray()[0].GainLoss.Should().Be(gainLoss1);
+
+            response.Assets.ToArray()[1].Symbol.Should().Be("ZM");
+            response.Assets.ToArray()[1].GainLoss.Should().Be(gainLoss2);
+
+            _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockFuzzyMatch.Verify(e => e.Compute(It.IsAny<string>(), It.IsAny<string>()), Times.Exactly(4));
+            _mockTimeSeriesService.Verify(e => e.Get(It.IsAny<string>()), Times.Exactly(2));
         }
 
         [Fact]
@@ -88,7 +492,27 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public async Task GetStarred_ReturnsExpectedItems()
+        public async Task GetStarred_WhenNone_ReturnsEmptyList()
+        {
+            // Arrange
+            var userId = 5;
+
+            _mockUserStarredAssetRepository
+                .Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<UserStarredAsset>());
+
+            // Act
+            var response = await _target.GetStarred(userId);
+
+            // Assert
+            response.Count().Should().Be(0);
+
+            _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+            _mockTimeSeriesService.Verify(e => e.Get(It.IsAny<string>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetStarred_ReturnsOrderedItems()
         {
             // Arrange
             var userId = 5;
@@ -97,16 +521,52 @@ namespace Investager.Core.UnitTests.Services
                 UserId = userId,
                 AssetId = 101,
                 DisplayOrder = 51,
+                Asset = new Asset
+                {
+                    Id = 101,
+                    Symbol = "ZM",
+                    Exchange = "NASDAQ",
+                    Currency = "USD",
+                    Industry = "Tech",
+                    Name = "Zoom Video",
+                    Provider = "Alpaca",
+                },
             };
+
+            var gainLoss1 = new GainLossResponse
+            {
+                Last2Weeks = 101.3f,
+            };
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get("NASDAQ:ZM"))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss1 });
 
             var userStarredAsset2 = new UserStarredAsset
             {
                 UserId = userId,
                 AssetId = 385,
                 DisplayOrder = 1,
+                Asset = new Asset
+                {
+                    Id = 222,
+                    Symbol = "SE",
+                    Exchange = "NASDAQ",
+                    Name = "Sea Limited",
+                },
             };
 
-            _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
+            var gainLoss2 = new GainLossResponse
+            {
+                Last3Days = 385.1337f,
+            };
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get("NASDAQ:SE"))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss2 });
+
+            _mockUserStarredAssetRepository
+                .Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
                 .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset1, userStarredAsset2 });
 
             // Act
@@ -115,13 +575,67 @@ namespace Investager.Core.UnitTests.Services
             // Assert
             response.Count().Should().Be(2);
 
-            var first = response.Single(e => e.AssetId == userStarredAsset1.AssetId);
-            first.DisplayOrder.Should().Be(userStarredAsset1.DisplayOrder);
-
-            var second = response.Single(e => e.AssetId == userStarredAsset2.AssetId);
-            second.DisplayOrder.Should().Be(userStarredAsset2.DisplayOrder);
+            response.First().AssetId.Should().Be(userStarredAsset2.AssetId);
 
             _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+            _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:ZM"), Times.Once);
+            _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:SE"), Times.Once);
+        }
+
+        [Fact]
+        public async Task GetStarred_MapsCorrectly()
+        {
+            // Arrange
+            var userId = 5;
+            var userStarredAsset = new UserStarredAsset
+            {
+                UserId = userId,
+                AssetId = 101,
+                DisplayOrder = 51,
+                Asset = new Asset
+                {
+                    Id = 101,
+                    Symbol = "ZM",
+                    Exchange = "NASDAQ",
+                    Currency = "USD",
+                    Industry = "Tech",
+                    Name = "Zoom Video",
+                    Provider = "Alpaca",
+                },
+            };
+
+            var gainLoss = new GainLossResponse
+            {
+                Last2Weeks = 101.3f,
+            };
+
+            _mockUserStarredAssetRepository
+                .Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
+                .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset });
+
+            _mockTimeSeriesService
+                .Setup(e => e.Get(It.IsAny<string>()))
+                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss });
+
+            // Act
+            var response = await _target.GetStarred(userId);
+
+            // Assert
+            response.Count().Should().Be(1);
+
+            var starredAssetResponse = response.First();
+            starredAssetResponse.AssetId.Should().Be(userStarredAsset.AssetId);
+            starredAssetResponse.Symbol.Should().Be(userStarredAsset.Asset.Symbol);
+            starredAssetResponse.Exchange.Should().Be(userStarredAsset.Asset.Exchange);
+            starredAssetResponse.Key.Should().Be("NASDAQ:ZM");
+            starredAssetResponse.Name.Should().Be(userStarredAsset.Asset.Name);
+            starredAssetResponse.Industry.Should().Be(userStarredAsset.Asset.Industry);
+            starredAssetResponse.Currency.Should().Be(userStarredAsset.Asset.Currency);
+            starredAssetResponse.DisplayOrder.Should().Be(userStarredAsset.DisplayOrder);
+            starredAssetResponse.GainLoss.Should().Be(gainLoss);
+
+            _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+            _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:ZM"), Times.Once);
         }
 
         [Fact]
@@ -210,33 +724,6 @@ namespace Investager.Core.UnitTests.Services
             // Assert
             userStarredAsset.DisplayOrder.Should().Be(request.DisplayOrder);
             _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
-        }
-
-        [Fact]
-        public void Unstar_WhenRepositoryThrows_Throws()
-        {
-            // Arrange
-            var errorMessage = "big oof";
-            var userId = 5;
-
-            var userStarredAsset = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = 385,
-                DisplayOrder = 51,
-            };
-
-            _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset });
-
-            _mockCoreUnitOfWork.Setup(e => e.SaveChanges())
-                .ThrowsAsync(new Exception(errorMessage));
-
-            // Act
-            Func<Task> act = async () => await _target.Unstar(userId, userStarredAsset.AssetId);
-
-            // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
         }
 
         [Fact]

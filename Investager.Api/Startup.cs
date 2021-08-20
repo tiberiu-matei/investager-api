@@ -26,7 +26,10 @@ namespace Investager.Api
         {
             services.AddDbContext<InvestagerCoreContext>(options =>
                 options.UseNpgsql(Configuration.GetConnectionString("InvestagerCore")));
+
             services.AddDbContext<InvestagerTimeSeriesContext>(options =>
+                options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
+            services.AddDbContextFactory<InvestagerTimeSeriesContext>(options =>
                 options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
 
             services.AddAutoMapper(e => e.AddProfile<AutoMapperProfile>());

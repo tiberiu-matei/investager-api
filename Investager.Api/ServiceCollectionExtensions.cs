@@ -30,6 +30,7 @@ namespace Investager.Api
 
             services.AddTransient<IPasswordHelper, PasswordHelper>();
             services.AddTransient<ITimeHelper, TimeHelper>();
+            services.AddTransient<IFuzzyMatch, LevenshteinFuzzyMatch>();
             services.AddTransient<IDataProviderServiceFactory, DataProviderServiceFactory>();
             services.AddTransient<IJwtTokenService, JwtTokenService>();
 
