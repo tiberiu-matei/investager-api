@@ -27,6 +27,7 @@ namespace Investager.Infrastructure.Persistence
             var points = await readContext.TimeSeriesPoints
                 .Where(e => e.Key == key)
                 .Select(e => new TimePointResponse { Time = e.Time, Value = e.Value })
+                .OrderByDescending(e => e.Time)
                 .ToListAsync();
 
             return new TimeSeriesResponse

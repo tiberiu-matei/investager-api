@@ -9,7 +9,7 @@ namespace Investager.Infrastructure.Services
 {
     public class Cache : ICache
     {
-        private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(5);
         private readonly string _redisConnectionString;
 
         private IDatabase _database;

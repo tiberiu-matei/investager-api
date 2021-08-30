@@ -29,7 +29,71 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             _context.Database.EnsureDeleted();
             _context.Database.EnsureCreated();
 
+            _mockContextFactory
+                .Setup(e => e.CreateDbContext())
+                .Returns(_context);
+
             _target = new TimeSeriesRepository(_context, _mockContextFactory.Object);
+        }
+
+        [Fact]
+        public async Task Get_ReturnsEmptyList_WhenNoEntries()
+        {
+            // Arrange
+            var key = "NASDAQ:SE";
+
+            // Act
+            var response = await _target.Get(key);
+
+            // Assert
+            response.Key.Should().Be(key);
+            response.Points.Any().Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task Get_ReturnsOrderedPoints()
+        {
+            // Arrange
+            var key = "NASDAQ:SE";
+            var point1 = new TimeSeriesPoint
+            {
+                Key = key,
+                Time = new DateTime(1985, 10, 10, 13, 37, 00),
+                Value = 38.5f,
+            };
+
+            var point2 = new TimeSeriesPoint
+            {
+                Key = key,
+                Time = new DateTime(2001, 10, 10, 13, 37, 00),
+                Value = 22.2f,
+            };
+
+            var point3 = new TimeSeriesPoint
+            {
+                Key = key,
+                Time = new DateTime(1988, 10, 10, 13, 37, 00),
+                Value = 13.7f,
+            };
+
+            await _target.InsertRange(new List<TimeSeriesPoint>
+            {
+                point1,
+                point2,
+                point3,
+            });
+
+            // Act
+            var response = await _target.Get(key);
+
+            // Assert
+            response.Key.Should().Be(key);
+            response.Points.Count.Should().Be(3);
+
+            var responsePointsArray = response.Points.ToArray();
+            responsePointsArray[0].Time.Should().Be(point2.Time);
+            responsePointsArray[1].Time.Should().Be(point3.Time);
+            responsePointsArray[2].Time.Should().Be(point1.Time);
         }
 
         [Fact]
