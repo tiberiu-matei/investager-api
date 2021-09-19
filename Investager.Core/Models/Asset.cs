@@ -19,7 +19,5 @@ namespace Investager.Core.Models
         public string Currency { get; set; }
 
         public ICollection<UserStarredAsset> StarredBy { get; set; } = new List<UserStarredAsset>();
-
-        public ICollection<PortfolioAsset> PortfolioAssets { get; set; } = new List<PortfolioAsset>();
     }
 }
