@@ -23,7 +23,6 @@ namespace Investager.Api
             services.AddScoped<ICoreUnitOfWork, CoreUnitOfWork>();
             services.AddScoped<ITimeSeriesRepository, TimeSeriesRepository>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IPortfolioService, PortfolioService>();
             services.AddScoped<IAuthorizationHandler, AuthenticatedUserHandler>();
             services.AddScoped<ITimeSeriesService, TimeSeriesService>();
             services.AddScoped<IAssetService, AssetService>();
