@@ -7,5 +7,7 @@
         public const string AlpacaData = "AlpacaData";
 
         public const string Loki = "Loki";
+
+        public const string CoinGecko = "CoinGecko";
     }
 }

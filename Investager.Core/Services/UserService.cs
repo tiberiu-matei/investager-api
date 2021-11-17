@@ -55,7 +55,7 @@ namespace Investager.Core.Services
                 PasswordHash = encodedPassword.Hash,
             };
 
-            _unitOfWork.Users.Insert(user);
+            _unitOfWork.Users.Add(user);
             await _unitOfWork.SaveChanges();
 
             var accessToken = _jwtTokenService.GetAccessToken(user.Id);
@@ -144,7 +144,7 @@ namespace Investager.Core.Services
                 User = user,
             };
 
-            _unitOfWork.RefreshTokens.Insert(refreshTokenEntity);
+            _unitOfWork.RefreshTokens.Add(refreshTokenEntity);
             await _unitOfWork.SaveChanges();
         }
 

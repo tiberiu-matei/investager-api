@@ -11,7 +11,9 @@ namespace Investager.Infrastructure.Persistence
 
         public DbSet<TimeSeriesPoint> TimeSeriesPoints { get; set; }
 
-        public InvestagerTimeSeriesContext(IConfiguration configuration, DbContextOptions<InvestagerTimeSeriesContext> options) : base(options)
+        public InvestagerTimeSeriesContext(
+            IConfiguration configuration,
+            DbContextOptions<InvestagerTimeSeriesContext> options) : base(options)
         {
             _configuration = configuration;
         }

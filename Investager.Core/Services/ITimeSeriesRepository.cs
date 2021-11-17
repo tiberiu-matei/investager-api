@@ -10,5 +10,7 @@ namespace Investager.Core.Services
         Task<TimeSeriesResponse> Get(string key);
 
         Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints);
+
+        Task DeleteSeries(string key);
     }
 }

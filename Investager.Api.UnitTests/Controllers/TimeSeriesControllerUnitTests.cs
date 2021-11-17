@@ -2,7 +2,6 @@
 using Investager.Api.Controllers;
 using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 using Moq;
 using System;
 using System.Collections.Generic;
@@ -47,10 +46,7 @@ namespace Investager.Api.UnitTests.Controllers
             var response = await _target.Get(key);
 
             // Assert
-            var result = response as OkObjectResult;
-            var value = result.Value as IEnumerable<TimePointResponse>;
-            result.StatusCode.Should().Be(200);
-            value.Should().BeEquivalentTo(timeSeries.Points);
+            response.Value.Should().BeEquivalentTo(timeSeries.Points);
         }
     }
 }

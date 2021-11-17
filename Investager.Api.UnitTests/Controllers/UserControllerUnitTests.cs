@@ -55,12 +55,9 @@ namespace Investager.Api.UnitTests.Controllers
 
             // Act
             var response = await _target.Get();
-            var result = response as OkObjectResult;
-            var value = result.Value as UserDto;
 
             // Assert
-            result.StatusCode.Should().Be(200);
-            value.Should().Be(dto);
+            response.Value.Should().Be(dto);
             _mockUserService.Verify(e => e.Get(userId), Times.Once);
         }
 
@@ -85,12 +82,9 @@ namespace Investager.Api.UnitTests.Controllers
 
             // Act
             var response = await _target.Register(request);
-            var result = response as OkObjectResult;
-            var value = result.Value as RegisterUserResponse;
 
             // Assert
-            result.StatusCode.Should().Be(200);
-            value.Should().Be(dto);
+            response.Value.Should().Be(dto);
             _mockUserService.Verify(e => e.Register(request), Times.Once);
         }
 
@@ -116,12 +110,9 @@ namespace Investager.Api.UnitTests.Controllers
 
             // Act
             var response = await _target.Login(request);
-            var result = response as OkObjectResult;
-            var value = result.Value as LoginResponse;
 
             // Assert
-            result.StatusCode.Should().Be(200);
-            value.Should().Be(dto);
+            response.Value.Should().Be(dto);
             _mockUserService.Verify(e => e.Login(request.Email, request.Password), Times.Once);
         }
 
@@ -140,12 +131,9 @@ namespace Investager.Api.UnitTests.Controllers
 
             // Act
             var response = await _target.RefreshToken(request);
-            var result = response as OkObjectResult;
-            var value = result.Value as AccessTokenDto;
 
             // Assert
-            result.StatusCode.Should().Be(200);
-            value.AccessToken.Should().Be(accessToken);
+            response.Value.AccessToken.Should().Be(accessToken);
             _mockUserService.Verify(e => e.RefreshToken(request.RefreshToken), Times.Once);
         }
 

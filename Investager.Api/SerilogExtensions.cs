@@ -1,7 +1,7 @@
 ﻿using Investager.Core.Models;
 using Investager.Infrastructure.Helpers;
 using Investager.Infrastructure.Logging;
-using Investager.Infrastructure.Models;
+using Investager.Infrastructure.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;

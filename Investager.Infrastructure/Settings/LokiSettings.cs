@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Investager.Infrastructure.Models
+namespace Investager.Infrastructure.Settings
 {
     public class LokiSettings
     {

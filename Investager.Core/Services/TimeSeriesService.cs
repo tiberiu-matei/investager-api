@@ -1,6 +1,8 @@
 ﻿using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
+using Investager.Core.Models;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,13 +23,53 @@ namespace Investager.Core.Services
 
         public Task<TimeSeriesSummary> Get(string key)
         {
-            return _cache.Get(key, async () => await GetData(key));
+            return _cache.Get(key, async () =>
+            {
+                var response = await _timeSeriesRepository.Get(key);
+
+                return GetData(response);
+            });
         }
 
-        private async Task<TimeSeriesSummary> GetData(string key)
+        public Task<TimeSeriesSummary> Get(CurrencyPair currencyPair)
         {
-            var timeSeries = await _timeSeriesRepository.Get(key);
+            var key = $"{currencyPair.FirstCurrency.Code}/{currencyPair.SecondCurrency.Code}";
+            return _cache.Get(key, async () =>
+            {
+                if (currencyPair.HasTimeData)
+                {
+                    var response = await _timeSeriesRepository.Get(key);
 
+                    return GetData(response);
+                }
+                else
+                {
+                    var dataKey = $"{currencyPair.SecondCurrency.Code}/{currencyPair.FirstCurrency.Code}";
+                    var response = await _timeSeriesRepository.Get(dataKey);
+                    foreach (var point in response.Points)
+                    {
+                        point.Value = 1 / point.Value;
+                    }
+
+                    return GetData(response);
+                }
+            });
+        }
+
+        private TimeSeriesSummary GetData(TimeSeriesResponse timeSeriesResponse)
+        {
+            var gainLoss = GetGainLossResponse(timeSeriesResponse.Points);
+
+            return new TimeSeriesSummary
+            {
+                Key = timeSeriesResponse.Key,
+                Points = timeSeriesResponse.Points,
+                GainLoss = gainLoss,
+            };
+        }
+
+        private GainLossResponse GetGainLossResponse(ICollection<TimePointResponse> points)
+        {
             var now = _timeHelper.GetUtcNow();
 
             var threeDaysAgo = now.AddDays(-3);
@@ -38,10 +80,10 @@ namespace Investager.Core.Services
             var oneYearAgo = now.AddYears(-1);
             var threeYearsAgo = now.AddYears(-3);
 
-            var pointsArray = timeSeries.Points.ToArray();
+            var pointsArray = points.ToArray();
 
             var nowPoint = GetClosestPoint(pointsArray, now);
-            var gainLoss = new GainLossResponse
+            return new GainLossResponse
             {
                 Last3Days = GetGainLoss(pointsArray, threeDaysAgo, nowPoint),
                 LastWeek = GetGainLoss(pointsArray, oneWeekAgo, nowPoint),
@@ -50,13 +92,6 @@ namespace Investager.Core.Services
                 Last3Months = GetGainLoss(pointsArray, threeMonthsAgo, nowPoint),
                 LastYear = GetGainLoss(pointsArray, oneYearAgo, nowPoint),
                 Last3Years = GetGainLoss(pointsArray, threeYearsAgo, nowPoint),
-            };
-
-            return new TimeSeriesSummary
-            {
-                Key = timeSeries.Key,
-                Points = timeSeries.Points,
-                GainLoss = gainLoss,
             };
         }
 

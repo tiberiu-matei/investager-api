@@ -2,12 +2,10 @@
 using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
 using Investager.Core.Models;
-using Investager.Core.Services;
 using Investager.Infrastructure.Services;
 using Moq;
 using Moq.Protected;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -20,14 +18,10 @@ namespace Investager.Infrastructure.UnitTests.Services
 {
     public class AlpacaServiceUnitTests
     {
+        private static readonly DateTime UtcNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
+
         private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-        private readonly Mock<ICoreUnitOfWork> _mockCoreUnitOfWork = new Mock<ICoreUnitOfWork>();
-        private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
-        private readonly Mock<ITimeSeriesRepository> _mockTimeSeriesRepository = new Mock<ITimeSeriesRepository>();
         private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
-        private readonly Mock<ICache> _mockCache = new Mock<ICache>();
-        private readonly Mock<ITimeSeriesService> _mockTimeSeriesService = new Mock<ITimeSeriesService>();
-        private readonly Asset _asset;
 
         private readonly AlpacaService _target;
 
@@ -38,35 +32,20 @@ namespace Investager.Infrastructure.UnitTests.Services
                 BaseAddress = new Uri("http://www.fake.com")
             };
 
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(DateTime.Now);
-
-            _asset = new Asset
-            {
-                Id = 3,
-                Exchange = "NASDAQ",
-                Symbol = "ZM",
-                Provider = DataProviders.Alpaca,
-            };
+            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(UtcNow);
 
             var mockHttpClientFactory = new Mock<IHttpClientFactory>();
             mockHttpClientFactory.Setup(e => e.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-            _mockAssetRepository.Setup(e => e.GetAll()).ReturnsAsync(new List<Asset>());
-
-            _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
-
             _target = new AlpacaService(
                 mockHttpClientFactory.Object,
-                _mockCoreUnitOfWork.Object,
-                _mockTimeSeriesRepository.Object,
-                _mockTimeHelper.Object,
-                _mockCache.Object,
-                _mockTimeSeriesService.Object);
+                _mockTimeHelper.Object);
         }
 
         [Fact]
-        public async Task ScanAssets_MakesCorrectInserts()
+        public async Task GetAssets_ReturnsCorrectData()
         {
+            // Arrange
             var responseContent = await File.ReadAllTextAsync("TestData/AlpacaGetAssetsExample.json");
             var response = new HttpResponseMessage
             {
@@ -82,55 +61,43 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
-            var result = await _target.ScanAssets();
+            // Act
+            var result = await _target.GetAssets();
 
-            result.ToList().Count.Should().Be(4);
-            _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NES" && e.Exchange == "AMEX")), Times.Once);
-            _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NETE" && e.Exchange == "NASDAQ")), Times.Once);
-            _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NETI" && e.Exchange == "NYSE")), Times.Once);
-            _mockAssetRepository.Verify(e => e.Insert(It.Is<Asset>(e => e.Symbol == "NETL" && e.Exchange == "ARCA")), Times.Once);
-            _mockAssetRepository.Verify(e => e.Insert(It.IsAny<Asset>()), Times.Exactly(4));
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
-        }
-
-        [Fact]
-        public async Task ScanAssets_WhenAssetsExist_DoesNoInserts()
-        {
-            var responseContent = await File.ReadAllTextAsync("TestData/AlpacaGetAssetsExample.json");
-            var response = new HttpResponseMessage
-            {
-                StatusCode = HttpStatusCode.OK,
-                Content = new StringContent(responseContent),
-            };
-
+            // Assert
             _mockHttpMessageHandler
                 .Protected()
-                .Setup<Task<HttpResponseMessage>>(
+                .Verify(
                     "SendAsync",
-                    ItExpr.IsAny<HttpRequestMessage>(),
-                    ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(response);
+                    Times.Once(),
+                    ItExpr.Is<HttpRequestMessage>(
+                        e => e.RequestUri.ToString() == "http://www.fake.com/v2/assets"),
+                    ItExpr.IsAny<CancellationToken>());
 
-            var existingAssets = new List<Asset>
-            {
-                new Asset { Symbol = "NES", Exchange = "AMEX" },
-                new Asset { Symbol = "NETE", Exchange = "NASDAQ" },
-                new Asset { Symbol = "NETI", Exchange = "NYSE" },
-                new Asset { Symbol = "NETL", Exchange = "ARCA" },
-            };
+            var assets = result.ToArray();
 
-            _mockAssetRepository.Setup(e => e.GetAll()).ReturnsAsync(existingAssets);
+            assets.Length.Should().Be(4);
 
-            var result = await _target.ScanAssets();
+            assets.All(e => e.Currency == "USD").Should().BeTrue();
+            assets.All(e => e.Provider == DataProviders.Alpaca).Should().BeTrue();
 
-            result.ToList().Count.Should().Be(0);
-            _mockAssetRepository.Verify(e => e.Insert(It.IsAny<Asset>()), Times.Never);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
+            assets[0].Symbol.Should().Be("NES");
+            assets[0].Exchange.Should().Be("AMEX");
+
+            assets[1].Symbol.Should().Be("NETE");
+            assets[1].Exchange.Should().Be("NASDAQ");
+
+            assets[2].Symbol.Should().Be("NETI");
+            assets[2].Exchange.Should().Be("NYSE");
+
+            assets[3].Symbol.Should().Be("NETL");
+            assets[3].Exchange.Should().Be("ARCA");
         }
 
         [Fact]
-        public void ScanAssets_WhenAlpacaCallFails_Throws()
+        public void GetAssets_WhenAlpacaCallFails_Throws()
         {
+            // Arrange
             var response = new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.TooManyRequests,
@@ -145,15 +112,15 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
-            Func<Task> act = async () => await _target.ScanAssets();
+            // Act
+            Func<Task> act = async () => await _target.GetAssets();
 
+            // Assert
             act.Should().Throw<HttpRequestException>();
-            _mockAssetRepository.Verify(e => e.Insert(It.IsAny<Asset>()), Times.Never);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
         }
 
         [Fact]
-        public void UpdateTimeSeriesData_WhenAlpacaCallFails_Throws()
+        public void GetRecentPoints_WhenAlpacaCallFails_Throws()
         {
             // Arrange
             var response = new HttpResponseMessage
@@ -162,10 +129,6 @@ namespace Investager.Infrastructure.UnitTests.Services
                 Content = new StringContent("Retry back later."),
             };
 
-            _mockTimeSeriesService
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(new TimeSeriesSummary { Points = new List<TimePointResponse>() });
-
             _mockHttpMessageHandler
                 .Protected()
                 .Setup<Task<HttpResponseMessage>>(
@@ -174,32 +137,30 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
+            var request = new UpdateAssetDataRequest
+            {
+                Symbol = "SE",
+                Exchange = "NASDAQ",
+                Key = "NASDAQ:SE",
+            };
+
             // Act
-            Func<Task> act = async () => await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
+            Func<Task> act = async () => await _target.GetRecentPoints(request);
 
             // Assert
             act.Should().Throw<HttpRequestException>();
-            _mockTimeSeriesRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Never);
-            _mockCache.Verify(e => e.Clear(It.IsAny<string>()), Times.Never);
         }
 
         [Fact]
-        public async Task UpdateTimeSeriesData_WhenNoPreviousData_AlpacaUrl_IsBuiltCorrectly()
+        public async Task GetRecentPoints_WhenNoPreviousData_AlpacaUrl_IsBuiltCorrectly()
         {
             // Arrange
-            var timeNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(timeNow);
-
             var responseContent = File.ReadAllText("TestData/AlpacaGetStockDataExample.json");
             var response = new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new StringContent(responseContent),
             };
-
-            _mockTimeSeriesService
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(new TimeSeriesSummary { Points = new List<TimePointResponse>() });
 
             _mockHttpMessageHandler
                 .Protected()
@@ -209,8 +170,15 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
+            var request = new UpdateAssetDataRequest
+            {
+                Symbol = "SE",
+                Exchange = "NASDAQ",
+                Key = "NASDAQ:SE",
+            };
+
             // Act
-            await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
+            await _target.GetRecentPoints(request);
 
             // Assert
             _mockHttpMessageHandler
@@ -218,39 +186,24 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .Verify(
                     "SendAsync",
                     Times.Once(),
-                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
+                    ItExpr.Is<HttpRequestMessage>(
+                        e => e.RequestUri != null
+                            && e.RequestUri.ToString()
+                                .Contains($"stocks/{request.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z" +
+                                    $"&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
         }
 
         [Fact]
-        public async Task UpdateTimeSeriesData_WithPreviousData_AlpacaUrl_IsBuiltCorrectly()
+        public async Task GetRecentPoints_WithPreviousData_AlpacaUrl_IsBuiltCorrectly()
         {
             // Arrange
-            var timeNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(timeNow);
-
             var responseContent = File.ReadAllText("TestData/AlpacaGetStockDataExample.json");
             var response = new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new StringContent(responseContent),
             };
-
-            var existingPoints = new List<TimePointResponse>
-            {
-                new TimePointResponse
-                {
-                    Time = new DateTime(2021, 02, 02, 13, 37, 0, DateTimeKind.Utc),
-                },
-                new TimePointResponse
-                {
-                    Time = new DateTime(2020, 04, 20, 13, 37, 0, DateTimeKind.Utc),
-                },
-            };
-
-            _mockTimeSeriesService
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(new TimeSeriesSummary { Points = existingPoints });
 
             _mockHttpMessageHandler
                 .Protected()
@@ -260,8 +213,16 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
+            var request = new UpdateAssetDataRequest
+            {
+                Symbol = "SE",
+                Exchange = "NASDAQ",
+                Key = "NASDAQ:SE",
+                LatestPointTime = new DateTime(2021, 02, 02, 13, 37, 0, DateTimeKind.Utc),
+            };
+
             // Act
-            await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
+            await _target.GetRecentPoints(request);
 
             // Assert
             _mockHttpMessageHandler
@@ -269,27 +230,24 @@ namespace Investager.Infrastructure.UnitTests.Services
                 .Verify(
                     "SendAsync",
                     Times.Once(),
-                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2021-02-02T13:37:00.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
+                    ItExpr.Is<HttpRequestMessage>(
+                        e => e.RequestUri != null
+                            && e.RequestUri.ToString()
+                                .Contains($"stocks/{request.Symbol}/bars?start=2021-02-02T13:37:00.0000000Z" +
+                                    $"&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
                     ItExpr.IsAny<CancellationToken>());
         }
 
         [Fact]
-        public async Task UpdateTimeSeriesData_ExpectedDataPoints_GetInsertedToTimeSeries()
+        public async Task GetRecentPoints_ReturnsExpectedDataPoints()
         {
             // Arrange
-            var timeNow = new DateTime(2021, 04, 11, 12, 16, 33, DateTimeKind.Utc);
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(timeNow);
-
             var responseContent = File.ReadAllText("TestData/AlpacaGetStockDataExample.json");
             var response = new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new StringContent(responseContent),
             };
-
-            _mockTimeSeriesService
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(new TimeSeriesSummary { Points = new List<TimePointResponse>() });
 
             _mockHttpMessageHandler
                 .Protected()
@@ -299,30 +257,51 @@ namespace Investager.Infrastructure.UnitTests.Services
                     ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(response);
 
+            var request = new UpdateAssetDataRequest
+            {
+                Symbol = "SE",
+                Exchange = "NASDAQ",
+                Key = "NASDAQ:SE",
+                LatestPointTime = new DateTime(2014, 10, 10, 13, 37, 00, DateTimeKind.Utc),
+            };
+
             // Act
-            await _target.UpdateTimeSeriesData(_asset.Exchange, _asset.Symbol);
+            var recentPoints = await _target.GetRecentPoints(request);
 
             // Assert
             _mockHttpMessageHandler
                 .Protected()
-                .Verify(
-                    "SendAsync",
-                    Times.Once(),
-                    ItExpr.Is<HttpRequestMessage>(e => e.RequestUri != null && e.RequestUri.ToString().Contains($"stocks/{_asset.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
-                    ItExpr.IsAny<CancellationToken>());
+                    .Verify(
+                        "SendAsync",
+                        Times.Once(),
+                        ItExpr.Is<HttpRequestMessage>(
+                            e => e.RequestUri != null
+                                && e.RequestUri.ToString()
+                                    .Contains($"stocks/{request.Symbol}/bars?start=2016-04-11T12:17:33.0000000Z" +
+                                        $"&end=2021-04-11T11:16:33.0000000Z&timeframe=1Day&limit=10000")),
+                        ItExpr.IsAny<CancellationToken>());
 
-            _mockTimeSeriesRepository.Verify(e => e.InsertRange(It.Is<IEnumerable<TimeSeriesPoint>>(
-                e => e.Count() == 5 &&
-                e.All(e => e.Key == "NASDAQ:ZM") &&
-                e.ToList().ElementAt(0).Time == new DateTime(2016, 04, 12, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(0).Value == 12.81F &&
-                e.ToList().ElementAt(1).Time == new DateTime(2016, 04, 13, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(1).Value == 13.06F &&
-                e.ToList().ElementAt(2).Time == new DateTime(2016, 04, 14, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(2).Value == 13.09F &&
-                e.ToList().ElementAt(3).Time == new DateTime(2016, 04, 15, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(3).Value == 12.94F &&
-                e.ToList().ElementAt(4).Time == new DateTime(2016, 04, 18, 04, 00, 00, DateTimeKind.Utc) && e.ToList().ElementAt(4).Value == 13.25F)),
-                    Times.Once);
+            var points = recentPoints.ToArray();
 
-            _mockTimeSeriesRepository.Verify(e => e.InsertRange(It.IsAny<IEnumerable<TimeSeriesPoint>>()), Times.Once);
-            _mockCache.Verify(e => e.Clear("NASDAQ:ZM"), Times.Once);
+            points.Length.Should().Be(5);
+
+            points.All(e => e.Key == "NASDAQ:SE").Should().BeTrue();
+            points.All(e => e.Time > request.LatestPointTime).Should().BeTrue();
+
+            points[0].Time.Should().Be(new DateTime(2016, 04, 12, 04, 00, 00, DateTimeKind.Utc));
+            points[0].Value.Should().Be(12.81F);
+
+            points[1].Time.Should().Be(new DateTime(2016, 04, 13, 04, 00, 00, DateTimeKind.Utc));
+            points[1].Value.Should().Be(13.06F);
+
+            points[2].Time.Should().Be(new DateTime(2016, 04, 14, 04, 00, 00, DateTimeKind.Utc));
+            points[2].Value.Should().Be(13.09F);
+
+            points[3].Time.Should().Be(new DateTime(2016, 04, 15, 04, 00, 00, DateTimeKind.Utc));
+            points[3].Value.Should().Be(12.94F);
+
+            points[4].Time.Should().Be(new DateTime(2016, 04, 18, 04, 00, 00, DateTimeKind.Utc));
+            points[4].Value.Should().Be(13.25F);
         }
     }
 }

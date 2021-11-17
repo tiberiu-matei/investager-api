@@ -24,9 +24,13 @@ namespace Investager.Infrastructure.Persistence
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfiguration(new UserConfiguration());
             modelBuilder.ApplyConfiguration(new AssetConfiguration());
-            modelBuilder.ApplyConfiguration(new UserStarredAssetConfiguration());
+            modelBuilder.ApplyConfiguration(new CurrencyConfiguration());
+            modelBuilder.ApplyConfiguration(new CurrencyPairConfiguration());
+            modelBuilder.ApplyConfiguration(new UserConfiguration());
+            modelBuilder.ApplyConfiguration(new WatchlistAssetConfiguration());
+            modelBuilder.ApplyConfiguration(new WatchlistConfiguration());
+            modelBuilder.ApplyConfiguration(new WatchlistCurrencyPairConfiguration());
         }
     }
 }

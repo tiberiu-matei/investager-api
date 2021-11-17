@@ -1,4 +1,4 @@
-using Investager.Infrastructure.Models;
+using Investager.Infrastructure.Settings;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

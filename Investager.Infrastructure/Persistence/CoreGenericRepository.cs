@@ -1,5 +1,6 @@
 ﻿using Investager.Core.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,31 +25,41 @@ namespace Investager.Infrastructure.Persistence
             return await _dbSet.AsNoTracking().ToListAsync();
         }
 
-        public async Task<IEnumerable<TEntity>> GetAllTracked()
+        public async Task<IEnumerable<TEntity>> GetAll(
+            Func<IQueryable<TEntity>, IIncludableQueryable<TEntity, object>> include)
         {
-            return await _dbSet.ToListAsync();
+            var query = _dbSet.AsNoTracking();
+            query = include(query);
+
+            return await query.ToListAsync();
         }
 
         public async Task<TEntity> GetByIdWithTracking(int id)
         {
-            return await _dbSet.FindAsync(id);
+            var entity = await _dbSet.FindAsync(id);
+
+            return entity ?? throw new Exception("Entity not found.");
         }
 
-        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter = null, string includeProperties = "")
+        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter)
         {
             IQueryable<TEntity> query = _dbSet;
             query.AsNoTracking();
 
-            if (filter != null)
-            {
-                query = query.Where(filter);
-            }
+            query = query.Where(filter);
 
-            foreach (var includeProperty in includeProperties.Split
-                (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
-            {
-                query = query.Include(includeProperty);
-            }
+            return await query.ToListAsync();
+        }
+
+        public async Task<IEnumerable<TEntity>> Find(
+            Expression<Func<TEntity, bool>> filter, Func<IQueryable<TEntity>,
+            IIncludableQueryable<TEntity, object>> include)
+        {
+            IQueryable<TEntity> query = _dbSet;
+            query.AsNoTracking();
+
+            query = include(query);
+            query = query.Where(filter);
 
             return await query.ToListAsync();
         }
@@ -64,16 +75,10 @@ namespace Investager.Infrastructure.Persistence
             return await query.ToListAsync();
         }
 
-        public async Task<IEnumerable<TEntity>> FindWithTracking(Expression<Func<TEntity, bool>> filter)
-        {
-            IQueryable<TEntity> query = _dbSet;
-
-            query = query.Where(filter);
-
-            return await query.ToListAsync();
-        }
-
-        public async Task<IEnumerable<TEntity>> Find(Expression<Func<TEntity, bool>> filter, Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy, int take)
+        public async Task<IEnumerable<TEntity>> Find(
+            Expression<Func<TEntity, bool>> filter,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy,
+            int take)
         {
             IQueryable<TEntity> query = _dbSet;
 
@@ -85,7 +90,16 @@ namespace Investager.Infrastructure.Persistence
             return await query.ToListAsync();
         }
 
-        public void Insert(TEntity entity)
+        public async Task<IEnumerable<TEntity>> FindWithTracking(Expression<Func<TEntity, bool>> filter)
+        {
+            IQueryable<TEntity> query = _dbSet;
+
+            query = query.Where(filter);
+
+            return await query.ToListAsync();
+        }
+
+        public void Add(TEntity entity)
         {
             _dbSet.Add(entity);
         }
@@ -100,6 +114,11 @@ namespace Investager.Infrastructure.Persistence
         {
             var entityToDelete = _dbSet.Find(id);
             Delete(entityToDelete);
+        }
+
+        public void Delete(Expression<Func<TEntity, bool>> filter)
+        {
+            _dbSet.RemoveRange(_dbSet.Where(filter));
         }
 
         public void Delete(TEntity entityToDelete)

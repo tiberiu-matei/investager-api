@@ -2,6 +2,7 @@
 using Investager.Core.Models;
 using Investager.Infrastructure.Logging;
 using Investager.Infrastructure.Models;
+using Investager.Infrastructure.Settings;
 using Microsoft.Extensions.Configuration;
 using Moq;
 using Moq.Protected;

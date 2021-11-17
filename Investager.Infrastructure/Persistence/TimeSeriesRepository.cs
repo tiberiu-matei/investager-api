@@ -64,5 +64,13 @@ namespace Investager.Infrastructure.Persistence
 
             await _context.Database.ExecuteSqlRawAsync(sqlBuilder.ToString());
         }
+
+        public async Task DeleteSeries(string key)
+        {
+            var sql = $"DELETE FROM \"TimeSeriesPoint\" WHERE \"Key\" = '{key}'";
+            using var context = _contextFactory.CreateDbContext();
+
+            await context.Database.ExecuteSqlRawAsync(sql);
+        }
     }
 }
