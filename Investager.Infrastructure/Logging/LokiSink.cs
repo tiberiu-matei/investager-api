@@ -1,5 +1,6 @@
 ﻿using Investager.Core.Models;
 using Investager.Infrastructure.Models;
+using Investager.Infrastructure.Settings;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Serilog;

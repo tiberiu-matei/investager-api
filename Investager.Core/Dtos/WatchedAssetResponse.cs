@@ -1,6 +1,6 @@
 ﻿namespace Investager.Core.Dtos
 {
-    public class StarredAssetResponse
+    public class WatchedAssetResponse
     {
         public int AssetId { get; set; }
 

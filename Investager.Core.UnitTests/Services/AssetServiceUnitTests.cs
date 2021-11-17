@@ -8,7 +8,6 @@ using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -23,14 +22,14 @@ namespace Investager.Core.UnitTests.Services
         private readonly Mock<IFuzzyMatch> _mockFuzzyMatch = new Mock<IFuzzyMatch>();
 
         private readonly Mock<IGenericRepository<Asset>> _mockAssetRepository = new Mock<IGenericRepository<Asset>>();
-        private readonly Mock<IGenericRepository<UserStarredAsset>> _mockUserStarredAssetRepository = new Mock<IGenericRepository<UserStarredAsset>>();
+        private readonly Mock<IGenericRepository<WatchlistAsset>> _mockUserStarredAssetRepository = new Mock<IGenericRepository<WatchlistAsset>>();
 
         private readonly AssetService _target;
 
         public AssetServiceUnitTests()
         {
             _mockCoreUnitOfWork.Setup(e => e.Assets).Returns(_mockAssetRepository.Object);
-            _mockCoreUnitOfWork.Setup(e => e.UserStarredAssets).Returns(_mockUserStarredAssetRepository.Object);
+            // _mockCoreUnitOfWork.Setup(e => e.UserStarredAssets).Returns(_mockUserStarredAssetRepository.Object);
 
             _target = new AssetService(
                 _mockCoreUnitOfWork.Object,
@@ -76,10 +75,6 @@ namespace Investager.Core.UnitTests.Services
                 },
             };
 
-            _mockAssetRepository
-                .Setup(e => e.GetAll())
-                .ReturnsAsync(assets);
-
             _mockMapper
                 .Setup(e => e.Map<IEnumerable<AssetSummaryDto>>(assets))
                 .Returns(summaries);
@@ -88,23 +83,27 @@ namespace Investager.Core.UnitTests.Services
                 .Setup(e => e.Get(It.IsAny<string>()))
                 .ReturnsAsync(new TimeSeriesSummary { GainLoss = new GainLossResponse() });
 
-            Func<Task<IEnumerable<AssetSummaryDto>>> getDataFunc = null;
+            Func<Task<IEnumerable<AssetSummaryDto>>> getSummariesFunc = null;
 
             _mockCache
                 .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()))
                 .ReturnsAsync(new List<AssetSummaryDto>())
-                .Callback((string key, TimeSpan ttl, Func<Task<IEnumerable<AssetSummaryDto>>> func) => getDataFunc = func);
+                .Callback((string key, TimeSpan ttl, Func<Task<IEnumerable<AssetSummaryDto>>> func) => getSummariesFunc = func);
+
+            _mockCache
+                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<Func<Task<IEnumerable<Asset>>>>()))
+                .ReturnsAsync(assets);
 
             // Act
             await _target.Search("abc", 10);
-            var response = await getDataFunc();
+            var response = await getSummariesFunc();
 
             // Assert
             response.Count().Should().Be(2);
             response.Should().BeEquivalentTo(summaries);
-            _mockAssetRepository.Verify(e => e.GetAll(), Times.Once);
             _mockMapper.Verify(e => e.Map<IEnumerable<AssetSummaryDto>>(assets), Times.Once);
             _mockCache.Verify(e => e.Get("AssetDtos", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<AssetSummaryDto>>>>()), Times.Once);
+            _mockCache.Verify(e => e.Get("Assets", TimeSpan.FromDays(1), It.IsAny<Func<Task<IEnumerable<Asset>>>>()), Times.Once);
         }
 
         [Fact]
@@ -475,299 +474,299 @@ namespace Investager.Core.UnitTests.Services
             _mockTimeSeriesService.Verify(e => e.Get(It.IsAny<string>()), Times.Exactly(2));
         }
 
-        [Fact]
-        public async Task GetStarred_WhenNoEntries_ReturnsEmptyList()
-        {
-            // Arrange
-            var userId = 5;
-            _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset>());
+        //[Fact]
+        //public async Task GetStarred_WhenNoEntries_ReturnsEmptyList()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()))
+        //        .ReturnsAsync(new List<WatchlistAsset>());
 
-            // Act
-            var response = await _target.GetStarred(userId);
+        //    // Act
+        //    var response = await _target.GetStarred(userId);
 
-            // Assert
-            response.Any().Should().BeFalse();
-            _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
-        }
+        //    // Assert
+        //    response.Any().Should().BeFalse();
+        //    _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+        //}
 
-        [Fact]
-        public async Task GetStarred_WhenNone_ReturnsEmptyList()
-        {
-            // Arrange
-            var userId = 5;
+        //[Fact]
+        //public async Task GetStarred_WhenNone_ReturnsEmptyList()
+        //{
+        //    // Arrange
+        //    var userId = 5;
 
-            _mockUserStarredAssetRepository
-                .Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset>());
+        //    _mockUserStarredAssetRepository
+        //        .Setup(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()))
+        //        .ReturnsAsync(new List<WatchlistAsset>());
 
-            // Act
-            var response = await _target.GetStarred(userId);
+        //    // Act
+        //    var response = await _target.GetStarred(userId);
 
-            // Assert
-            response.Count().Should().Be(0);
+        //    // Assert
+        //    response.Count().Should().Be(0);
 
-            _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
-            _mockTimeSeriesService.Verify(e => e.Get(It.IsAny<string>()), Times.Never);
-        }
+        //    _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+        //    _mockTimeSeriesService.Verify(e => e.Get(It.IsAny<string>()), Times.Never);
+        //}
 
-        [Fact]
-        public async Task GetStarred_ReturnsOrderedItems()
-        {
-            // Arrange
-            var userId = 5;
-            var userStarredAsset1 = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = 101,
-                DisplayOrder = 51,
-                Asset = new Asset
-                {
-                    Id = 101,
-                    Symbol = "ZM",
-                    Exchange = "NASDAQ",
-                    Currency = "USD",
-                    Industry = "Tech",
-                    Name = "Zoom Video",
-                    Provider = "Alpaca",
-                },
-            };
+        //[Fact]
+        //public async Task GetStarred_ReturnsOrderedItems()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var userStarredAsset1 = new WatchlistAsset
+        //    {
+        //        UserId = userId,
+        //        AssetId = 101,
+        //        DisplayOrder = 51,
+        //        Asset = new Asset
+        //        {
+        //            Id = 101,
+        //            Symbol = "ZM",
+        //            Exchange = "NASDAQ",
+        //            Currency = "USD",
+        //            Industry = "Tech",
+        //            Name = "Zoom Video",
+        //            Provider = "Alpaca",
+        //        },
+        //    };
 
-            var gainLoss1 = new GainLossResponse
-            {
-                Last2Weeks = 101.3f,
-            };
+        //    var gainLoss1 = new GainLossResponse
+        //    {
+        //        Last2Weeks = 101.3f,
+        //    };
 
-            _mockTimeSeriesService
-                .Setup(e => e.Get("NASDAQ:ZM"))
-                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss1 });
+        //    _mockTimeSeriesService
+        //        .Setup(e => e.Get("NASDAQ:ZM"))
+        //        .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss1 });
 
-            var userStarredAsset2 = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = 385,
-                DisplayOrder = 1,
-                Asset = new Asset
-                {
-                    Id = 222,
-                    Symbol = "SE",
-                    Exchange = "NASDAQ",
-                    Name = "Sea Limited",
-                },
-            };
+        //    var userStarredAsset2 = new WatchlistAsset
+        //    {
+        //        UserId = userId,
+        //        AssetId = 385,
+        //        DisplayOrder = 1,
+        //        Asset = new Asset
+        //        {
+        //            Id = 222,
+        //            Symbol = "SE",
+        //            Exchange = "NASDAQ",
+        //            Name = "Sea Limited",
+        //        },
+        //    };
 
-            var gainLoss2 = new GainLossResponse
-            {
-                Last3Days = 385.1337f,
-            };
+        //    var gainLoss2 = new GainLossResponse
+        //    {
+        //        Last3Days = 385.1337f,
+        //    };
 
-            _mockTimeSeriesService
-                .Setup(e => e.Get("NASDAQ:SE"))
-                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss2 });
+        //    _mockTimeSeriesService
+        //        .Setup(e => e.Get("NASDAQ:SE"))
+        //        .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss2 });
 
-            _mockUserStarredAssetRepository
-                .Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset1, userStarredAsset2 });
+        //    _mockUserStarredAssetRepository
+        //        .Setup(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()))
+        //        .ReturnsAsync(new List<WatchlistAsset> { userStarredAsset1, userStarredAsset2 });
 
-            // Act
-            var response = await _target.GetStarred(userId);
+        //    // Act
+        //    var response = await _target.GetStarred(userId);
 
-            // Assert
-            response.Count().Should().Be(2);
+        //    // Assert
+        //    response.Count().Should().Be(2);
 
-            response.First().AssetId.Should().Be(userStarredAsset2.AssetId);
+        //    response.First().AssetId.Should().Be(userStarredAsset2.AssetId);
 
-            _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
-            _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:ZM"), Times.Once);
-            _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:SE"), Times.Once);
-        }
+        //    _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+        //    _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:ZM"), Times.Once);
+        //    _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:SE"), Times.Once);
+        //}
 
-        [Fact]
-        public async Task GetStarred_MapsCorrectly()
-        {
-            // Arrange
-            var userId = 5;
-            var userStarredAsset = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = 101,
-                DisplayOrder = 51,
-                Asset = new Asset
-                {
-                    Id = 101,
-                    Symbol = "ZM",
-                    Exchange = "NASDAQ",
-                    Currency = "USD",
-                    Industry = "Tech",
-                    Name = "Zoom Video",
-                    Provider = "Alpaca",
-                },
-            };
+        //[Fact]
+        //public async Task GetStarred_MapsCorrectly()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var userStarredAsset = new WatchlistAsset
+        //    {
+        //        UserId = userId,
+        //        AssetId = 101,
+        //        DisplayOrder = 51,
+        //        Asset = new Asset
+        //        {
+        //            Id = 101,
+        //            Symbol = "ZM",
+        //            Exchange = "NASDAQ",
+        //            Currency = "USD",
+        //            Industry = "Tech",
+        //            Name = "Zoom Video",
+        //            Provider = "Alpaca",
+        //        },
+        //    };
 
-            var gainLoss = new GainLossResponse
-            {
-                Last2Weeks = 101.3f,
-            };
+        //    var gainLoss = new GainLossResponse
+        //    {
+        //        Last2Weeks = 101.3f,
+        //    };
 
-            _mockUserStarredAssetRepository
-                .Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset });
+        //    _mockUserStarredAssetRepository
+        //        .Setup(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()))
+        //        .ReturnsAsync(new List<WatchlistAsset> { userStarredAsset });
 
-            _mockTimeSeriesService
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss });
+        //    _mockTimeSeriesService
+        //        .Setup(e => e.Get(It.IsAny<string>()))
+        //        .ReturnsAsync(new TimeSeriesSummary { GainLoss = gainLoss });
 
-            // Act
-            var response = await _target.GetStarred(userId);
+        //    // Act
+        //    var response = await _target.GetStarred(userId);
 
-            // Assert
-            response.Count().Should().Be(1);
+        //    // Assert
+        //    response.Count().Should().Be(1);
 
-            var starredAssetResponse = response.First();
-            starredAssetResponse.AssetId.Should().Be(userStarredAsset.AssetId);
-            starredAssetResponse.Symbol.Should().Be(userStarredAsset.Asset.Symbol);
-            starredAssetResponse.Exchange.Should().Be(userStarredAsset.Asset.Exchange);
-            starredAssetResponse.Key.Should().Be("NASDAQ:ZM");
-            starredAssetResponse.Name.Should().Be(userStarredAsset.Asset.Name);
-            starredAssetResponse.Industry.Should().Be(userStarredAsset.Asset.Industry);
-            starredAssetResponse.Currency.Should().Be(userStarredAsset.Asset.Currency);
-            starredAssetResponse.DisplayOrder.Should().Be(userStarredAsset.DisplayOrder);
-            starredAssetResponse.GainLoss.Should().Be(gainLoss);
+        //    var starredAssetResponse = response.First();
+        //    starredAssetResponse.AssetId.Should().Be(userStarredAsset.AssetId);
+        //    starredAssetResponse.Symbol.Should().Be(userStarredAsset.Asset.Symbol);
+        //    starredAssetResponse.Exchange.Should().Be(userStarredAsset.Asset.Exchange);
+        //    starredAssetResponse.Key.Should().Be("NASDAQ:ZM");
+        //    starredAssetResponse.Name.Should().Be(userStarredAsset.Asset.Name);
+        //    starredAssetResponse.Industry.Should().Be(userStarredAsset.Asset.Industry);
+        //    starredAssetResponse.Currency.Should().Be(userStarredAsset.Asset.Currency);
+        //    starredAssetResponse.DisplayOrder.Should().Be(userStarredAsset.DisplayOrder);
+        //    starredAssetResponse.GainLoss.Should().Be(gainLoss);
 
-            _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()), Times.Once);
-            _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:ZM"), Times.Once);
-        }
+        //    _mockUserStarredAssetRepository.Verify(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()), Times.Once);
+        //    _mockTimeSeriesService.Verify(e => e.Get("NASDAQ:ZM"), Times.Once);
+        //}
 
-        [Fact]
-        public void Star_WhenRepositoryThrows_Throws()
-        {
-            // Arrange
-            var errorMessage = "big oof";
-            _mockCoreUnitOfWork.Setup(e => e.SaveChanges())
-                .ThrowsAsync(new Exception(errorMessage));
+        //[Fact]
+        //public void Star_WhenRepositoryThrows_Throws()
+        //{
+        //    // Arrange
+        //    var errorMessage = "big oof";
+        //    _mockCoreUnitOfWork.Setup(e => e.SaveChanges())
+        //        .ThrowsAsync(new Exception(errorMessage));
 
-            // Act
-            Func<Task> act = async () => await _target.Star(5, new StarAssetRequest());
+        //    // Act
+        //    Func<Task> act = async () => await _target.Star(5, new StarAssetRequest());
 
-            // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
-        }
+        //    // Assert
+        //    act.Should().Throw<Exception>().WithMessage(errorMessage);
+        //}
 
-        [Fact]
-        public async Task Star_SavesCorrectData()
-        {
-            // Arrange
-            var userId = 5;
-            var request = new StarAssetRequest
-            {
-                AssetId = 385,
-                DisplayOrder = 122,
-            };
+        //[Fact]
+        //public async Task Star_SavesCorrectData()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var request = new StarAssetRequest
+        //    {
+        //        AssetId = 385,
+        //        DisplayOrder = 122,
+        //    };
 
-            // Act
-            await _target.Star(userId, request);
+        //    // Act
+        //    await _target.Star(userId, request);
 
-            // Assert
-            _mockUserStarredAssetRepository.Verify(x => x.Insert(
-                It.Is<UserStarredAsset>(e => e.AssetId == request.AssetId && e.UserId == userId && e.DisplayOrder == request.DisplayOrder)),
-                    Times.Once);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
-        }
+        //    // Assert
+        //    _mockUserStarredAssetRepository.Verify(x => x.Add(
+        //        It.Is<WatchlistAsset>(e => e.AssetId == request.AssetId && e.UserId == userId && e.DisplayOrder == request.DisplayOrder)),
+        //            Times.Once);
+        //    _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        //}
 
-        [Fact]
-        public void UpdateDisplaySortOrder_WhenEntryNotFound_Throws()
-        {
-            // Arrange
-            var userId = 5;
-            var request = new StarAssetRequest
-            {
-                AssetId = 385,
-                DisplayOrder = 51,
-            };
+        //[Fact]
+        //public void UpdateDisplaySortOrder_WhenEntryNotFound_Throws()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var request = new StarAssetRequest
+        //    {
+        //        AssetId = 385,
+        //        DisplayOrder = 51,
+        //    };
 
-            _mockUserStarredAssetRepository.Setup(e => e.FindWithTracking(It.IsAny<Expression<Func<UserStarredAsset, bool>>>()))
-                .ReturnsAsync(new List<UserStarredAsset>());
+        //    _mockUserStarredAssetRepository.Setup(e => e.FindWithTracking(It.IsAny<Expression<Func<WatchlistAsset, bool>>>()))
+        //        .ReturnsAsync(new List<WatchlistAsset>());
 
-            // Act
-            Func<Task> act = async () => await _target.UpdateStarDisplayOrder(userId, request);
+        //    // Act
+        //    Func<Task> act = async () => await _target.UpdateStarDisplayOrder(userId, request);
 
-            // Assert
-            act.Should().Throw<Exception>();
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
-        }
+        //    // Assert
+        //    act.Should().Throw<Exception>();
+        //    _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
+        //}
 
-        [Fact]
-        public async Task UpdateDisplaySortOrder_UpdatesOrder()
-        {
-            // Arrange
-            var userId = 5;
-            var assetId = 385;
-            var userStarredAsset = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = assetId,
-                DisplayOrder = 51,
-            };
+        //[Fact]
+        //public async Task UpdateDisplaySortOrder_UpdatesOrder()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var assetId = 385;
+        //    var userStarredAsset = new WatchlistAsset
+        //    {
+        //        UserId = userId,
+        //        AssetId = assetId,
+        //        DisplayOrder = 51,
+        //    };
 
-            var request = new StarAssetRequest
-            {
-                AssetId = assetId,
-                DisplayOrder = 222,
-            };
+        //    var request = new StarAssetRequest
+        //    {
+        //        AssetId = assetId,
+        //        DisplayOrder = 222,
+        //    };
 
-            _mockUserStarredAssetRepository.Setup(e => e.FindWithTracking(It.IsAny<Expression<Func<UserStarredAsset, bool>>>()))
-                .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset });
+        //    _mockUserStarredAssetRepository.Setup(e => e.FindWithTracking(It.IsAny<Expression<Func<WatchlistAsset, bool>>>()))
+        //        .ReturnsAsync(new List<WatchlistAsset> { userStarredAsset });
 
-            // Act
-            await _target.UpdateStarDisplayOrder(userId, request);
+        //    // Act
+        //    await _target.UpdateStarDisplayOrder(userId, request);
 
-            // Assert
-            userStarredAsset.DisplayOrder.Should().Be(request.DisplayOrder);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
-        }
+        //    // Assert
+        //    userStarredAsset.DisplayOrder.Should().Be(request.DisplayOrder);
+        //    _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        //}
 
-        [Fact]
-        public void Unstar_WhenEntryNotFound_Throws()
-        {
-            // Arrange
-            var userId = 5;
-            var assetId = 385;
+        //[Fact]
+        //public void Unstar_WhenEntryNotFound_Throws()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var assetId = 385;
 
-            _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset>());
+        //    _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()))
+        //        .ReturnsAsync(new List<WatchlistAsset>());
 
-            // Act
-            Func<Task> act = async () => await _target.Unstar(userId, assetId);
+        //    // Act
+        //    Func<Task> act = async () => await _target.Unstar(userId, assetId);
 
-            // Assert
-            act.Should().Throw<Exception>();
-            _mockUserStarredAssetRepository.Verify(x => x.Delete(It.IsAny<UserStarredAsset>()), Times.Never);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
-        }
+        //    // Assert
+        //    act.Should().Throw<Exception>();
+        //    _mockUserStarredAssetRepository.Verify(x => x.Delete(It.IsAny<WatchlistAsset>()), Times.Never);
+        //    _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Never);
+        //}
 
-        [Fact]
-        public async Task Unstar_RemovesCorrectEntry()
-        {
-            // Arrange
-            var userId = 5;
-            var userStarredAsset = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = 385,
-                DisplayOrder = 51,
-            };
+        //[Fact]
+        //public async Task Unstar_RemovesCorrectEntry()
+        //{
+        //    // Arrange
+        //    var userId = 5;
+        //    var userStarredAsset = new WatchlistAsset
+        //    {
+        //        UserId = userId,
+        //        AssetId = 385,
+        //        DisplayOrder = 51,
+        //    };
 
-            _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<UserStarredAsset, bool>>>(), It.IsAny<string>()))
-                .ReturnsAsync(new List<UserStarredAsset> { userStarredAsset });
+        //    _mockUserStarredAssetRepository.Setup(e => e.Find(It.IsAny<Expression<Func<WatchlistAsset, bool>>>(), It.IsAny<string>()))
+        //        .ReturnsAsync(new List<WatchlistAsset> { userStarredAsset });
 
-            // Act
-            await _target.Unstar(userId, userStarredAsset.AssetId);
+        //    // Act
+        //    await _target.Unstar(userId, userStarredAsset.AssetId);
 
-            // Assert
-            _mockUserStarredAssetRepository.Verify(x => x.Delete(
-                It.Is<UserStarredAsset>(e => e.AssetId == userStarredAsset.AssetId && e.UserId == userId && e.DisplayOrder == userStarredAsset.DisplayOrder)),
-                    Times.Once);
-            _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
-        }
+        //    // Assert
+        //    _mockUserStarredAssetRepository.Verify(x => x.Delete(
+        //        It.Is<WatchlistAsset>(e => e.AssetId == userStarredAsset.AssetId && e.UserId == userId && e.DisplayOrder == userStarredAsset.DisplayOrder)),
+        //            Times.Once);
+        //    _mockCoreUnitOfWork.Verify(e => e.SaveChanges(), Times.Once);
+        //}
     }
 }

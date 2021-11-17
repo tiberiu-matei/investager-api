@@ -20,8 +20,6 @@ namespace Investager.Core.Models
 
         public ICollection<RefreshToken> RefreshTokens { get; set; }
 
-        public ICollection<UserStarredAsset> StarredAssets { get; set; }
-
-        public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
+        public ICollection<Watchlist> Watchlists { get; set; }
     }
 }

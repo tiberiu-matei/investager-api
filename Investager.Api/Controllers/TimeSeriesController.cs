@@ -1,5 +1,8 @@
-﻿using Investager.Core.Interfaces;
+﻿using Investager.Core.Dtos;
+using Investager.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Investager.Api.Controllers
@@ -16,11 +19,11 @@ namespace Investager.Api.Controllers
         }
 
         [HttpGet("{key}")]
-        public async Task<IActionResult> Get([FromRoute] string key)
+        public async Task<ActionResult<ICollection<TimePointResponse>>> Get([FromRoute] string key)
         {
             var response = await _timeSeriesService.Get(key);
 
-            return Ok(response.Points);
+            return response.Points.ToList();
         }
     }
 }

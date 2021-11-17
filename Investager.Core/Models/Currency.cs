@@ -8,6 +8,8 @@
 
         public string Name { get; set; }
 
-        public string Type { get; set; }
+        public CurrencyType Type { get; set; }
+
+        public string ProviderId { get; set; }
     }
 }

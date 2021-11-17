@@ -28,7 +28,8 @@ namespace Investager.Api
                 options.UseNpgsql(Configuration.GetConnectionString("InvestagerCore")));
 
             services.AddDbContext<InvestagerTimeSeriesContext>(options =>
-                options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
+                options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")),
+                optionsLifetime: ServiceLifetime.Singleton);
             services.AddDbContextFactory<InvestagerTimeSeriesContext>(options =>
                 options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
 

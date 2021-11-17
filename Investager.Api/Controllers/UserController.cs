@@ -19,39 +19,40 @@ namespace Investager.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<ActionResult<UserDto>> Get()
         {
             var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
             var response = await _userService.Get(userId);
 
-            return Ok(response);
+            return response;
         }
 
         [AllowAnonymous]
         [HttpPost]
-        public async Task<IActionResult> Register([FromBody] RegisterUserDto registerUserDto)
+        public async Task<ActionResult<RegisterUserResponse>> Register([FromBody] RegisterUserDto registerUserDto)
         {
             var response = await _userService.Register(registerUserDto);
 
-            return Ok(response);
+            return response;
         }
 
         [AllowAnonymous]
         [HttpPut("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+        public async Task<ActionResult<LoginResponse>> Login([FromBody] LoginDto loginDto)
         {
             var response = await _userService.Login(loginDto.Email, loginDto.Password);
 
-            return Ok(response);
+            return response;
         }
 
         [AllowAnonymous]
         [HttpPut("refreshtoken")]
-        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
+        public async Task<ActionResult<AccessTokenDto>> RefreshToken([FromBody] RefreshTokenDto refreshTokenDto)
         {
             var response = await _userService.RefreshToken(refreshTokenDto.RefreshToken);
+            var dto = new AccessTokenDto { AccessToken = response };
 
-            return Ok(new AccessTokenDto { AccessToken = response });
+            return dto;
         }
 
         [HttpPut]

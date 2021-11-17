@@ -4,7 +4,6 @@ using Investager.Core.Dtos;
 using Investager.Core.Interfaces;
 using Investager.Core.Models;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -42,7 +41,7 @@ namespace Investager.Core.Services
                 AssetDtosTtl,
                 async () =>
                 {
-                    var assets = await _coreUnitOfWork.Assets.GetAll();
+                    var assets = await GetAssets();
 
                     return _mapper.Map<IEnumerable<AssetSummaryDto>>(assets);
                 });
@@ -95,73 +94,12 @@ namespace Investager.Core.Services
             return response;
         }
 
-        public async Task<IEnumerable<StarredAssetResponse>> GetStarred(int userId)
+        public Task<IEnumerable<Asset>> GetAssets()
         {
-            var starred = await _coreUnitOfWork.UserStarredAssets.Find(e => e.UserId == userId, nameof(UserStarredAsset.Asset));
-
-            var starredResponses = new BlockingCollection<StarredAssetResponse>();
-
-            await Task.WhenAll(starred.Select(async e =>
-            {
-                var response = await GetStarredAssetResponse(e);
-                starredResponses.Add(response);
-            }));
-
-            return starredResponses.OrderBy(e => e.DisplayOrder);
-        }
-
-        public async Task Star(int userId, StarAssetRequest request)
-        {
-            var userStarredAsset = new UserStarredAsset
-            {
-                UserId = userId,
-                AssetId = request.AssetId,
-                DisplayOrder = request.DisplayOrder,
-            };
-
-            _coreUnitOfWork.UserStarredAssets.Insert(userStarredAsset);
-            await _coreUnitOfWork.SaveChanges();
-        }
-
-        public async Task UpdateStarDisplayOrder(int userId, StarAssetRequest request)
-        {
-            var userStarredAssets = await _coreUnitOfWork.UserStarredAssets.FindWithTracking(e => e.UserId == userId && e.AssetId == request.AssetId);
-            var userStarredAsset = userStarredAssets.Single();
-            userStarredAsset.DisplayOrder = request.DisplayOrder;
-
-            await _coreUnitOfWork.SaveChanges();
-        }
-
-        public async Task Unstar(int userId, int assetId)
-        {
-            var userStarredAssets = await _coreUnitOfWork.UserStarredAssets
-                .Find(e => e.UserId == userId && e.AssetId == assetId);
-            var userStarredAsset = userStarredAssets.Single();
-
-            _coreUnitOfWork.UserStarredAssets.Delete(userStarredAsset);
-            await _coreUnitOfWork.SaveChanges();
-        }
-
-        private async Task<StarredAssetResponse> GetStarredAssetResponse(UserStarredAsset userStarredAsset)
-        {
-            var key = $"{userStarredAsset.Asset.Exchange}:{userStarredAsset.Asset.Symbol}";
-
-            var timeSeriesSummary = await _timeSeriesService.Get(key);
-
-            var response = new StarredAssetResponse
-            {
-                AssetId = userStarredAsset.AssetId,
-                Symbol = userStarredAsset.Asset.Symbol,
-                Exchange = userStarredAsset.Asset.Exchange,
-                Key = key,
-                Name = userStarredAsset.Asset.Name,
-                Industry = userStarredAsset.Asset.Industry,
-                Currency = userStarredAsset.Asset.Currency,
-                DisplayOrder = userStarredAsset.DisplayOrder,
-                GainLoss = timeSeriesSummary.GainLoss,
-            };
-
-            return response;
+            return _cache.Get(
+                CacheKeys.Assets,
+                AssetDtosTtl,
+                () => _coreUnitOfWork.Assets.GetAll());
         }
     }
 }

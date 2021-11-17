@@ -12,8 +12,16 @@ namespace Investager.Core.Services
 
         IGenericRepository<Asset> Assets { get; }
 
-        IGenericRepository<UserStarredAsset> UserStarredAssets { get; }
+        IGenericRepository<Currency> Currencies { get; }
 
-        Task SaveChanges();
+        IGenericRepository<CurrencyPair> CurrencyPairs { get; }
+
+        IGenericRepository<Watchlist> Watchlists { get; }
+
+        IGenericRepository<WatchlistAsset> WatchlistAssets { get; }
+
+        IGenericRepository<WatchlistCurrencyPair> WatchlistCurrencyPairs { get; }
+
+        Task<int> SaveChanges();
     }
 }

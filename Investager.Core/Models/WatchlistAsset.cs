@@ -1,10 +1,10 @@
 ﻿namespace Investager.Core.Models
 {
-    public class UserStarredAsset
+    public class WatchlistAsset
     {
-        public int UserId { get; set; }
+        public int WatchlistId { get; set; }
 
-        public User User { get; set; }
+        public Watchlist Watchlist { get; set; }
 
         public int AssetId { get; set; }
 

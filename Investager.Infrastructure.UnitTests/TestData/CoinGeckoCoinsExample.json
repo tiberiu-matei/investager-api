@@ -1,0 +1,17 @@
+﻿[
+    {
+        "id": "cardano",
+        "symbol": "ada",
+        "name": "Cardano"
+    },
+    {
+        "id": "dagger",
+        "symbol": "xdag",
+        "name": "Dagger"
+    },
+    {
+        "id": "ethereum",
+        "symbol": "eth",
+        "name": "Ethereum"
+    }
+]

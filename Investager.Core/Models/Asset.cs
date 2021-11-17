@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Investager.Core.Models
+﻿namespace Investager.Core.Models
 {
     public class Asset
     {
@@ -17,7 +15,5 @@ namespace Investager.Core.Models
         public string Industry { get; set; }
 
         public string Currency { get; set; }
-
-        public ICollection<UserStarredAsset> StarredBy { get; set; } = new List<UserStarredAsset>();
     }
 }

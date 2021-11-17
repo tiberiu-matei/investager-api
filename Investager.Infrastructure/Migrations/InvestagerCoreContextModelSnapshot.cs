@@ -17,7 +17,7 @@ namespace Investager.Infrastructure.Migrations
             modelBuilder
                 .UseIdentityByDefaultColumns()
                 .HasAnnotation("Relational:MaxIdentifierLength", 63)
-                .HasAnnotation("ProductVersion", "5.0.2");
+                .HasAnnotation("ProductVersion", "5.0.10");
 
             modelBuilder.Entity("Investager.Core.Models.Asset", b =>
                 {
@@ -42,7 +42,6 @@ namespace Investager.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Provider")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Symbol")
@@ -57,40 +56,54 @@ namespace Investager.Infrastructure.Migrations
                     b.ToTable("Asset");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.Portfolio", b =>
+            modelBuilder.Entity("Investager.Core.Models.Currency", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .UseIdentityByDefaultColumn();
 
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("UserId")
+                    b.Property<string>("ProviderId")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("Code")
+                        .IsUnique();
 
-                    b.ToTable("Portfolio");
+                    b.ToTable("Currency");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.PortfolioAsset", b =>
+            modelBuilder.Entity("Investager.Core.Models.CurrencyPair", b =>
                 {
-                    b.Property<int>("PortfolioId")
+                    b.Property<int>("FirstCurrencyId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("AssetId")
+                    b.Property<int>("SecondCurrencyId")
                         .HasColumnType("integer");
 
-                    b.HasKey("PortfolioId", "AssetId");
+                    b.Property<bool>("HasTimeData")
+                        .HasColumnType("boolean");
 
-                    b.HasIndex("AssetId");
+                    b.Property<string>("Provider")
+                        .HasColumnType("text");
 
-                    b.ToTable("PortfolioAsset");
+                    b.HasKey("FirstCurrencyId", "SecondCurrencyId");
+
+                    b.HasIndex("SecondCurrencyId");
+
+                    b.ToTable("CurrencyPair");
                 });
 
             modelBuilder.Entity("Investager.Core.Models.RefreshToken", b =>
@@ -159,9 +172,33 @@ namespace Investager.Infrastructure.Migrations
                     b.ToTable("User");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.UserStarredAsset", b =>
+            modelBuilder.Entity("Investager.Core.Models.Watchlist", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .UseIdentityByDefaultColumn();
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Watchlist");
+                });
+
+            modelBuilder.Entity("Investager.Core.Models.WatchlistAsset", b =>
+                {
+                    b.Property<int>("WatchlistId")
                         .HasColumnType("integer");
 
                     b.Property<int>("AssetId")
@@ -170,41 +207,57 @@ namespace Investager.Infrastructure.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
-                    b.HasKey("UserId", "AssetId");
+                    b.HasKey("WatchlistId", "AssetId");
 
                     b.HasIndex("AssetId");
 
-                    b.ToTable("UserStarredAsset");
+                    b.ToTable("WatchlistAsset");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.Portfolio", b =>
+            modelBuilder.Entity("Investager.Core.Models.WatchlistCurrencyPair", b =>
                 {
-                    b.HasOne("Investager.Core.Models.User", "User")
-                        .WithMany("Portfolios")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Property<int>("WatchlistId")
+                        .HasColumnType("integer");
 
-                    b.Navigation("User");
+                    b.Property<int>("CurrencyPairId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CurrencyPairFirstCurrencyId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("CurrencyPairSecondCurrencyId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsReversed")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("WatchlistId", "CurrencyPairId");
+
+                    b.HasIndex("CurrencyPairFirstCurrencyId", "CurrencyPairSecondCurrencyId");
+
+                    b.ToTable("WatchlistCurrencyPair");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.PortfolioAsset", b =>
+            modelBuilder.Entity("Investager.Core.Models.CurrencyPair", b =>
                 {
-                    b.HasOne("Investager.Core.Models.Asset", "Asset")
-                        .WithMany("PortfolioAssets")
-                        .HasForeignKey("AssetId")
+                    b.HasOne("Investager.Core.Models.Currency", "FirstCurrency")
+                        .WithMany()
+                        .HasForeignKey("FirstCurrencyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Investager.Core.Models.Portfolio", "Portfolio")
-                        .WithMany("PortfolioAssets")
-                        .HasForeignKey("PortfolioId")
+                    b.HasOne("Investager.Core.Models.Currency", "SecondCurrency")
+                        .WithMany()
+                        .HasForeignKey("SecondCurrencyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Asset");
+                    b.Navigation("FirstCurrency");
 
-                    b.Navigation("Portfolio");
+                    b.Navigation("SecondCurrency");
                 });
 
             modelBuilder.Entity("Investager.Core.Models.RefreshToken", b =>
@@ -218,44 +271,65 @@ namespace Investager.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.UserStarredAsset", b =>
+            modelBuilder.Entity("Investager.Core.Models.Watchlist", b =>
+                {
+                    b.HasOne("Investager.Core.Models.User", "User")
+                        .WithMany("Watchlists")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Investager.Core.Models.WatchlistAsset", b =>
                 {
                     b.HasOne("Investager.Core.Models.Asset", "Asset")
-                        .WithMany("StarredBy")
+                        .WithMany()
                         .HasForeignKey("AssetId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Investager.Core.Models.User", "User")
-                        .WithMany("StarredAssets")
-                        .HasForeignKey("UserId")
+                    b.HasOne("Investager.Core.Models.Watchlist", "Watchlist")
+                        .WithMany("Assets")
+                        .HasForeignKey("WatchlistId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Asset");
 
-                    b.Navigation("User");
+                    b.Navigation("Watchlist");
                 });
 
-            modelBuilder.Entity("Investager.Core.Models.Asset", b =>
+            modelBuilder.Entity("Investager.Core.Models.WatchlistCurrencyPair", b =>
                 {
-                    b.Navigation("PortfolioAssets");
+                    b.HasOne("Investager.Core.Models.Watchlist", "Watchlist")
+                        .WithMany("CurrencyPairs")
+                        .HasForeignKey("WatchlistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
-                    b.Navigation("StarredBy");
-                });
+                    b.HasOne("Investager.Core.Models.CurrencyPair", "CurrencyPair")
+                        .WithMany()
+                        .HasForeignKey("CurrencyPairFirstCurrencyId", "CurrencyPairSecondCurrencyId");
 
-            modelBuilder.Entity("Investager.Core.Models.Portfolio", b =>
-                {
-                    b.Navigation("PortfolioAssets");
+                    b.Navigation("CurrencyPair");
+
+                    b.Navigation("Watchlist");
                 });
 
             modelBuilder.Entity("Investager.Core.Models.User", b =>
                 {
-                    b.Navigation("Portfolios");
-
                     b.Navigation("RefreshTokens");
 
-                    b.Navigation("StarredAssets");
+                    b.Navigation("Watchlists");
+                });
+
+            modelBuilder.Entity("Investager.Core.Models.Watchlist", b =>
+                {
+                    b.Navigation("Assets");
+
+                    b.Navigation("CurrencyPairs");
                 });
 #pragma warning restore 612, 618
         }

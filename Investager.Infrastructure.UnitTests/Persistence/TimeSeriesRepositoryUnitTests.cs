@@ -15,14 +15,16 @@ namespace Investager.Infrastructure.UnitTests.Persistence
     public class TimeSeriesRepositoryUnitTests
     {
         private readonly InvestagerTimeSeriesContext _context;
-        private readonly Mock<IDbContextFactory<InvestagerTimeSeriesContext>> _mockContextFactory = new Mock<IDbContextFactory<InvestagerTimeSeriesContext>>();
+        private readonly InvestagerTimeSeriesContext _deleteContext;
+        private readonly Mock<IDbContextFactory<InvestagerTimeSeriesContext>> _mockContextFactory
+            = new Mock<IDbContextFactory<InvestagerTimeSeriesContext>>();
 
         private readonly TimeSeriesRepository _target;
 
         public TimeSeriesRepositoryUnitTests()
         {
             var contextOptions = new DbContextOptionsBuilder<InvestagerTimeSeriesContext>()
-                .UseSqlite("Filename=Test.db")
+                .UseSqlite("Filename=TestTimeSeries.db")
                 .Options;
 
             _context = new InvestagerTimeSeriesContext(new Mock<IConfiguration>().Object, contextOptions);
@@ -32,6 +34,8 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             _mockContextFactory
                 .Setup(e => e.CreateDbContext())
                 .Returns(_context);
+
+            _deleteContext = new InvestagerTimeSeriesContext(new Mock<IConfiguration>().Object, contextOptions);
 
             _target = new TimeSeriesRepository(_context, _mockContextFactory.Object);
         }
@@ -170,6 +174,81 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             points.ElementAt(0).Should().BeEquivalentTo(listWithOnePoint.First());
             points.ElementAt(1).Should().BeEquivalentTo(listWithTwoPoints.First());
             points.ElementAt(2).Should().BeEquivalentTo(listWithTwoPoints.Last());
+        }
+
+        [Fact]
+        public async Task DeleteSeries_WhenMultiplePointsExist_RemovesAllPoints()
+        {
+            // Arrange
+            var existingPoints = new List<TimeSeriesPoint>
+            {
+                new TimeSeriesPoint
+                {
+                    Time = new DateTime(2021, 02, 02),
+                    Key = "NASDAQ:ZM",
+                    Value = 99.99f,
+                },
+                new TimeSeriesPoint
+                {
+                    Time = new DateTime(2021, 02, 01),
+                    Key = "NASDAQ:ZM",
+                    Value = 97.99f,
+                },
+                new TimeSeriesPoint
+                {
+                    Time = new DateTime(2021, 02, 03),
+                    Key = "NYSE:PATH",
+                    Value = 1001.01f,
+                },
+            };
+            await _target.InsertRange(existingPoints);
+
+            _mockContextFactory
+                .Setup(e => e.CreateDbContext())
+                .Returns(_deleteContext);
+
+            // Act
+            await _target.DeleteSeries("NASDAQ:ZM");
+
+            // Assert
+            var points = await _context.Set<TimeSeriesPoint>().ToListAsync();
+            points.Count.Should().Be(1);
+            points.ElementAt(0).Key.Should().Be("NYSE:PATH");
+        }
+
+        [Fact]
+        public async Task DeleteSeries_WhenNoPointsExist_DoesNothing()
+        {
+            // Arrange
+            var existingPoints = new List<TimeSeriesPoint>
+            {
+                new TimeSeriesPoint
+                {
+                    Time = new DateTime(2021, 02, 02),
+                    Key = "NASDAQ:SE",
+                    Value = 99.99f,
+                },
+                new TimeSeriesPoint
+                {
+                    Time = new DateTime(2021, 02, 03),
+                    Key = "NYSE:PATH",
+                    Value = 1001.01f,
+                },
+            };
+            await _target.InsertRange(existingPoints);
+
+            _mockContextFactory
+                .Setup(e => e.CreateDbContext())
+                .Returns(_deleteContext);
+
+            // Act
+            await _target.DeleteSeries("NASDAQ:ZM");
+
+            // Assert
+            var points = await _context.Set<TimeSeriesPoint>().ToListAsync();
+            points.Count.Should().Be(2);
+            points.ElementAt(0).Key.Should().Be("NASDAQ:SE");
+            points.ElementAt(1).Key.Should().Be("NYSE:PATH");
         }
     }
 }

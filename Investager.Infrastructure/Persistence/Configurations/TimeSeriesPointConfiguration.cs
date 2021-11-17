@@ -10,7 +10,9 @@ namespace Investager.Infrastructure.Persistence.Configurations
         public void Configure(EntityTypeBuilder<TimeSeriesPoint> builder)
         {
             builder.HasNoKey();
+
             builder.ToTable("TimeSeriesPoint");
+
             builder.Property(e => e.Time).IsRequired().HasConversion(e => e, e => DateTime.SpecifyKind(e, DateTimeKind.Utc)); ;
             builder.Property(e => e.Key).IsRequired();
             builder.Property(e => e.Value).IsRequired();
