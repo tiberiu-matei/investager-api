@@ -5,41 +5,40 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Investager.Api.Middleware
+namespace Investager.Api.Middleware;
+
+public class ErrorHandlerMiddleware
 {
-    public class ErrorHandlerMiddleware
+    private readonly RequestDelegate _next;
+    private readonly ILogger<ErrorHandlerMiddleware> _logger;
+
+    public ErrorHandlerMiddleware(RequestDelegate next, ILogger<ErrorHandlerMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger<ErrorHandlerMiddleware> _logger;
+        _next = next;
+        _logger = logger;
+    }
 
-        public ErrorHandlerMiddleware(RequestDelegate next, ILogger<ErrorHandlerMiddleware> logger)
+    public async Task Invoke(HttpContext context)
+    {
+        try
         {
-            _next = next;
-            _logger = logger;
+            await _next(context);
         }
-
-        public async Task Invoke(HttpContext context)
+        catch (Exception error)
         {
-            try
+            _logger.LogError(error, "Error while processing request.");
+
+            var response = context.Response;
+            response.ContentType = "application/json";
+
+            response.StatusCode = error switch
             {
-                await _next(context);
-            }
-            catch (Exception error)
-            {
-                _logger.LogError(error, "Error while processing request.");
+                InvalidBearerTokenException => (int)HttpStatusCode.Unauthorized,
+                InvestagerException => (int)HttpStatusCode.BadRequest,
+                _ => (int)HttpStatusCode.InternalServerError,
+            };
 
-                var response = context.Response;
-                response.ContentType = "application/json";
-
-                response.StatusCode = error switch
-                {
-                    InvalidBearerTokenException => (int)HttpStatusCode.Unauthorized,
-                    InvestagerException => (int)HttpStatusCode.BadRequest,
-                    _ => (int)HttpStatusCode.InternalServerError,
-                };
-
-                await response.WriteAsync(error?.Message);
-            }
+            await response.WriteAsync(error?.Message);
         }
     }
 }

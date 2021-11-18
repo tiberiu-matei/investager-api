@@ -1,13 +1,12 @@
 ﻿using System;
 
-namespace Investager.Core.Models
+namespace Investager.Core.Models;
+
+public class TimeSeriesPoint
 {
-    public class TimeSeriesPoint
-    {
-        public DateTime Time { get; set; }
+    public DateTime Time { get; set; }
 
-        public string Key { get; set; }
+    public string Key { get; set; }
 
-        public float Value { get; set; }
-    }
+    public float Value { get; set; }
 }

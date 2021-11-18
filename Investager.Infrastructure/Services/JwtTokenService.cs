@@ -6,73 +6,72 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-namespace Investager.Infrastructure.Services
+namespace Investager.Infrastructure.Services;
+
+public class JwtTokenService : IJwtTokenService
 {
-    public class JwtTokenService : IJwtTokenService
+    private const string Issuer = "investager";
+    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(60);
+
+    private readonly ITimeHelper _timeHelper;
+    private readonly SigningCredentials _signingCredentials;
+
+    public JwtTokenService(ITimeHelper timeHelper, SigningCredentials signingCredentials)
     {
-        private const string Issuer = "investager";
-        private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(60);
+        _timeHelper = timeHelper;
+        _signingCredentials = signingCredentials;
+    }
 
-        private readonly ITimeHelper _timeHelper;
-        private readonly SigningCredentials _signingCredentials;
-
-        public JwtTokenService(ITimeHelper timeHelper, SigningCredentials signingCredentials)
-        {
-            _timeHelper = timeHelper;
-            _signingCredentials = signingCredentials;
-        }
-
-        public string GetAccessToken(int userId)
-        {
-            var claims = new List<Claim>()
+    public string GetAccessToken(int userId)
+    {
+        var claims = new List<Claim>()
             {
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             };
 
-            var jwt = new JwtSecurityToken(
-                issuer: Issuer,
-                expires: _timeHelper.GetUtcNow() + AccessTokenLifetime,
-                claims: claims,
-                signingCredentials: _signingCredentials);
+        var jwt = new JwtSecurityToken(
+            issuer: Issuer,
+            expires: _timeHelper.GetUtcNow() + AccessTokenLifetime,
+            claims: claims,
+            signingCredentials: _signingCredentials);
 
-            var token = new JwtSecurityTokenHandler().WriteToken(jwt);
+        var token = new JwtSecurityTokenHandler().WriteToken(jwt);
 
-            return token;
-        }
+        return token;
+    }
 
-        public string GetRefreshToken(int userId)
-        {
-            var claims = new List<Claim>()
+    public string GetRefreshToken(int userId)
+    {
+        var claims = new List<Claim>()
             {
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(InvestagerClaimNames.RefreshToken, "1")
             };
 
-            var jwt = new JwtSecurityToken(
-                issuer: Issuer,
-                claims: claims,
-                signingCredentials: _signingCredentials);
+        var jwt = new JwtSecurityToken(
+            issuer: Issuer,
+            claims: claims,
+            signingCredentials: _signingCredentials);
 
-            var token = new JwtSecurityTokenHandler().WriteToken(jwt);
+        var token = new JwtSecurityTokenHandler().WriteToken(jwt);
 
-            return token;
-        }
+        return token;
+    }
 
-        public JwtSecurityToken Validate(string token)
+    public JwtSecurityToken Validate(string token)
+    {
+        var validationParameters = new TokenValidationParameters
         {
-            var validationParameters = new TokenValidationParameters
-            {
-                ValidIssuer = Issuer,
-                IssuerSigningKeys = new List<SecurityKey> { _signingCredentials.Key },
-                ValidateAudience = false,
-            };
+            ValidIssuer = Issuer,
+            IssuerSigningKeys = new List<SecurityKey> { _signingCredentials.Key },
+            ValidateAudience = false,
+        };
 
-            var handler = new JwtSecurityTokenHandler();
-            handler.ValidateToken(token, validationParameters, out var validatedToken);
+        var handler = new JwtSecurityTokenHandler();
+        handler.ValidateToken(token, validationParameters, out var validatedToken);
 
-            return validatedToken as JwtSecurityToken;
-        }
+        return validatedToken as JwtSecurityToken;
     }
 }

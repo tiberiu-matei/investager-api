@@ -1,7 +1,6 @@
-﻿namespace Investager.Core.Dtos
+﻿namespace Investager.Core.Dtos;
+
+public class DisplayOrderBody
 {
-    public class DisplayOrderBody
-    {
-        public int DisplayOrder { get; set; }
-    }
+    public int DisplayOrder { get; set; }
 }

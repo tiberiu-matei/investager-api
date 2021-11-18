@@ -1,7 +1,6 @@
-﻿namespace Investager.Core.Dtos
+﻿namespace Investager.Core.Dtos;
+
+public class RefreshTokenDto
 {
-    public class RefreshTokenDto
-    {
-        public string RefreshToken { get; set; }
-    }
+    public string RefreshToken { get; set; }
 }

@@ -1,9 +1,8 @@
-﻿namespace Investager.Core.Models
+﻿namespace Investager.Core.Models;
+
+public enum Theme
 {
-    public enum Theme
-    {
-        None = 0,
-        Dark = 1,
-        Light = 2,
-    }
+    None = 0,
+    Dark = 1,
+    Light = 2,
 }

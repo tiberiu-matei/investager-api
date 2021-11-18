@@ -2,26 +2,25 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Services
+namespace Investager.Core.Services;
+
+public interface ICoreUnitOfWork : IDisposable
 {
-    public interface ICoreUnitOfWork : IDisposable
-    {
-        IGenericRepository<User> Users { get; }
+    IGenericRepository<User> Users { get; }
 
-        IGenericRepository<RefreshToken> RefreshTokens { get; }
+    IGenericRepository<RefreshToken> RefreshTokens { get; }
 
-        IGenericRepository<Asset> Assets { get; }
+    IGenericRepository<Asset> Assets { get; }
 
-        IGenericRepository<Currency> Currencies { get; }
+    IGenericRepository<Currency> Currencies { get; }
 
-        IGenericRepository<CurrencyPair> CurrencyPairs { get; }
+    IGenericRepository<CurrencyPair> CurrencyPairs { get; }
 
-        IGenericRepository<Watchlist> Watchlists { get; }
+    IGenericRepository<Watchlist> Watchlists { get; }
 
-        IGenericRepository<WatchlistAsset> WatchlistAssets { get; }
+    IGenericRepository<WatchlistAsset> WatchlistAssets { get; }
 
-        IGenericRepository<WatchlistCurrencyPair> WatchlistCurrencyPairs { get; }
+    IGenericRepository<WatchlistCurrencyPair> WatchlistCurrencyPairs { get; }
 
-        Task<int> SaveChanges();
-    }
+    Task<int> SaveChanges();
 }

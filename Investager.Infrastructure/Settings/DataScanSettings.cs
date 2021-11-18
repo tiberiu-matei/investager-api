@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace Investager.Infrastructure.Settings
+namespace Investager.Infrastructure.Settings;
+
+public class DataScanSettings
 {
-    public class DataScanSettings
-    {
-        public TimeSpan ScanInterval { get; set; } = TimeSpan.FromHours(4);
-    }
+    public TimeSpan ScanInterval { get; set; } = TimeSpan.FromHours(4);
 }

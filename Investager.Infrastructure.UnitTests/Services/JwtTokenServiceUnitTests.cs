@@ -8,121 +8,120 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Xunit;
 
-namespace Investager.Infrastructure.UnitTests.Services
+namespace Investager.Infrastructure.UnitTests.Services;
+
+public class JwtTokenServiceUnitTests
 {
-    public class JwtTokenServiceUnitTests
+    private static readonly DateTime UtcNow = new DateTime(2021, 05, 10, 10, 10, 10, DateTimeKind.Utc);
+
+    private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
+
+    private readonly JwtTokenService _target;
+
+    public JwtTokenServiceUnitTests()
     {
-        private static readonly DateTime UtcNow = new DateTime(2021, 05, 10, 10, 10, 10, DateTimeKind.Utc);
+        _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(UtcNow);
 
-        private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
+        var signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes("12314ko19k9kf399j555mm54k4kkfkfk444"));
+        var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-        private readonly JwtTokenService _target;
+        _target = new JwtTokenService(_mockTimeHelper.Object, signingCredentials);
+    }
 
-        public JwtTokenServiceUnitTests()
-        {
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(UtcNow);
+    [Fact]
+    public void GetAccessToken_Includes_UserId()
+    {
+        var encodedToken = _target.GetAccessToken(385);
 
-            var signingKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes("12314ko19k9kf399j555mm54k4kkfkfk444"));
-            var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+        var token = GetToken(encodedToken);
 
-            _target = new JwtTokenService(_mockTimeHelper.Object, signingCredentials);
-        }
+        token.Payload["sub"].Should().Be("385");
+    }
 
-        [Fact]
-        public void GetAccessToken_Includes_UserId()
-        {
-            var encodedToken = _target.GetAccessToken(385);
+    [Fact]
+    public void GetAccessToken_Includes_Issuer()
+    {
+        var encodedToken = _target.GetAccessToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = GetToken(encodedToken);
 
-            token.Payload["sub"].Should().Be("385");
-        }
+        token.Issuer.Should().Be("investager");
+    }
 
-        [Fact]
-        public void GetAccessToken_Includes_Issuer()
-        {
-            var encodedToken = _target.GetAccessToken(385);
+    [Fact]
+    public void GetAccessToken_Includes_ExpiryDate()
+    {
+        var encodedToken = _target.GetAccessToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = GetToken(encodedToken);
 
-            token.Issuer.Should().Be("investager");
-        }
+        token.ValidTo.Should().Be(UtcNow.AddMinutes(60));
+    }
 
-        [Fact]
-        public void GetAccessToken_Includes_ExpiryDate()
-        {
-            var encodedToken = _target.GetAccessToken(385);
+    [Fact]
+    public void GetRefreshToken_Includes_UserId()
+    {
+        var encodedToken = _target.GetRefreshToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = GetToken(encodedToken);
 
-            token.ValidTo.Should().Be(UtcNow.AddMinutes(60));
-        }
+        token.Payload["sub"].Should().Be("385");
+    }
 
-        [Fact]
-        public void GetRefreshToken_Includes_UserId()
-        {
-            var encodedToken = _target.GetRefreshToken(385);
+    [Fact]
+    public void GetRefreshToken_Includes_Issuer()
+    {
+        var encodedToken = _target.GetRefreshToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = GetToken(encodedToken);
 
-            token.Payload["sub"].Should().Be("385");
-        }
+        token.Issuer.Should().Be("investager");
+    }
 
-        [Fact]
-        public void GetRefreshToken_Includes_Issuer()
-        {
-            var encodedToken = _target.GetRefreshToken(385);
+    [Fact]
+    public void GetRefreshToken_DoesNotInclude_ExpiryDate()
+    {
+        var encodedToken = _target.GetRefreshToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = GetToken(encodedToken);
 
-            token.Issuer.Should().Be("investager");
-        }
+        token.ValidTo.Should().Be(DateTime.MinValue);
+    }
 
-        [Fact]
-        public void GetRefreshToken_DoesNotInclude_ExpiryDate()
-        {
-            var encodedToken = _target.GetRefreshToken(385);
+    [Fact]
+    public void GetRefreshToken_Includes_RefreshTokenClaim()
+    {
+        var encodedToken = _target.GetRefreshToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = GetToken(encodedToken);
 
-            token.ValidTo.Should().Be(DateTime.MinValue);
-        }
+        token.Payload["rtk"].Should().Be("1");
+    }
 
-        [Fact]
-        public void GetRefreshToken_Includes_RefreshTokenClaim()
-        {
-            var encodedToken = _target.GetRefreshToken(385);
+    [Fact]
+    public void Validate_WithCorrectToken_DoesNotThrow()
+    {
+        _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(DateTime.UtcNow);
+        var encodedToken = _target.GetAccessToken(385);
 
-            var token = GetToken(encodedToken);
+        var token = _target.Validate(encodedToken);
 
-            token.Payload["rtk"].Should().Be("1");
-        }
+        token.Should().NotBeNull();
+    }
 
-        [Fact]
-        public void Validate_WithCorrectToken_DoesNotThrow()
-        {
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(DateTime.UtcNow);
-            var encodedToken = _target.GetAccessToken(385);
+    [Fact]
+    public void Validate_WithFakeToken_Throws()
+    {
+        Action act = () => _target.Validate("faketoken");
 
-            var token = _target.Validate(encodedToken);
+        act.Should().Throw<Exception>();
+    }
 
-            token.Should().NotBeNull();
-        }
+    private JwtSecurityToken GetToken(string encodedToken)
+    {
+        var handler = new JwtSecurityTokenHandler();
+        var jsonToken = handler.ReadToken(encodedToken);
 
-        [Fact]
-        public void Validate_WithFakeToken_Throws()
-        {
-            Action act = () => _target.Validate("faketoken");
-
-            act.Should().Throw<Exception>();
-        }
-
-        private JwtSecurityToken GetToken(string encodedToken)
-        {
-            var handler = new JwtSecurityTokenHandler();
-            var jsonToken = handler.ReadToken(encodedToken);
-
-            return jsonToken as JwtSecurityToken;
-        }
+        return jsonToken as JwtSecurityToken;
     }
 }

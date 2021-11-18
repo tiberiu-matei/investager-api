@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace Investager.Infrastructure.Settings
+namespace Investager.Infrastructure.Settings;
+
+public class DataUpdateSettings
 {
-    public class DataUpdateSettings
-    {
-        public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromHours(1);
-    }
+    public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromHours(1);
 }

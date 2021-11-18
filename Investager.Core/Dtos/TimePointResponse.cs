@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace Investager.Core.Dtos
-{
-    public class TimePointResponse
-    {
-        public DateTime Time { get; set; }
+namespace Investager.Core.Dtos;
 
-        public float Value { get; set; }
-    }
+public class TimePointResponse
+{
+    public DateTime Time { get; set; }
+
+    public float Value { get; set; }
 }

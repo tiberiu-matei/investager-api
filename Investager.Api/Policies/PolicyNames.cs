@@ -1,7 +1,6 @@
-﻿namespace Investager.Api.Policies
+﻿namespace Investager.Api.Policies;
+
+public static class PolicyNames
 {
-    public static class PolicyNames
-    {
-        public const string User = "User";
-    }
+    public const string User = "User";
 }

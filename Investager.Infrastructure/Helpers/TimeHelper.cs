@@ -1,13 +1,12 @@
 ﻿using Investager.Core.Interfaces;
 using System;
 
-namespace Investager.Infrastructure.Helpers
+namespace Investager.Infrastructure.Helpers;
+
+public class TimeHelper : ITimeHelper
 {
-    public class TimeHelper : ITimeHelper
+    public DateTime GetUtcNow()
     {
-        public DateTime GetUtcNow()
-        {
-            return DateTime.UtcNow;
-        }
+        return DateTime.UtcNow;
     }
 }

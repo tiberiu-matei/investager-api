@@ -5,25 +5,24 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Investager.Api.Controllers
+namespace Investager.Api.Controllers;
+
+[ApiController]
+[Route("api/v1/[controller]")]
+public class TimeSeriesController : ControllerBase
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class TimeSeriesController : ControllerBase
+    private readonly ITimeSeriesService _timeSeriesService;
+
+    public TimeSeriesController(ITimeSeriesService timeSeriesService)
     {
-        private readonly ITimeSeriesService _timeSeriesService;
+        _timeSeriesService = timeSeriesService;
+    }
 
-        public TimeSeriesController(ITimeSeriesService timeSeriesService)
-        {
-            _timeSeriesService = timeSeriesService;
-        }
+    [HttpGet("{key}")]
+    public async Task<ActionResult<ICollection<TimePointResponse>>> Get([FromRoute] string key)
+    {
+        var response = await _timeSeriesService.Get(key);
 
-        [HttpGet("{key}")]
-        public async Task<ActionResult<ICollection<TimePointResponse>>> Get([FromRoute] string key)
-        {
-            var response = await _timeSeriesService.Get(key);
-
-            return response.Points.ToList();
-        }
+        return response.Points.ToList();
     }
 }

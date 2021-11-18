@@ -3,14 +3,13 @@ using Investager.Core.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Services
+namespace Investager.Core.Services;
+
+public interface ITimeSeriesRepository
 {
-    public interface ITimeSeriesRepository
-    {
-        Task<TimeSeriesResponse> Get(string key);
+    Task<TimeSeriesResponse> Get(string key);
 
-        Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints);
+    Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints);
 
-        Task DeleteSeries(string key);
-    }
+    Task DeleteSeries(string key);
 }

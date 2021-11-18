@@ -2,22 +2,21 @@
 using Investager.Core.Models;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Interfaces
+namespace Investager.Core.Interfaces;
+
+public interface IUserService
 {
-    public interface IUserService
-    {
-        Task<UserDto> Get(int userId);
+    Task<UserDto> Get(int userId);
 
-        Task<RegisterUserResponse> Register(RegisterUserDto registerUserDto);
+    Task<RegisterUserResponse> Register(RegisterUserDto registerUserDto);
 
-        Task<LoginResponse> Login(string email, string password);
+    Task<LoginResponse> Login(string email, string password);
 
-        Task<string> RefreshToken(string refreshToken);
+    Task<string> RefreshToken(string refreshToken);
 
-        Task Update(int userId, UpdateUserDto updateUserDto);
+    Task Update(int userId, UpdateUserDto updateUserDto);
 
-        Task UpdateTheme(int userId, Theme theme);
+    Task UpdateTheme(int userId, Theme theme);
 
-        Task Delete(int userId);
-    }
+    Task Delete(int userId);
 }

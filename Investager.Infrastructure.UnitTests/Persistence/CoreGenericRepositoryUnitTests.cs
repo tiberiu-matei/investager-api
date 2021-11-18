@@ -10,32 +10,32 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Investager.Infrastructure.UnitTests.Persistence
+namespace Investager.Infrastructure.UnitTests.Persistence;
+
+public class CoreGenericRepositoryUnitTests
 {
-    public class CoreGenericRepositoryUnitTests
+    private readonly InvestagerCoreContext _context;
+
+    private readonly CoreGenericRepository<User> _target;
+
+    public CoreGenericRepositoryUnitTests()
     {
-        private readonly InvestagerCoreContext _context;
+        var contextOptions = new DbContextOptionsBuilder<InvestagerCoreContext>()
+            .UseSqlite("Filename=TestCore.db")
+            .Options;
 
-        private readonly CoreGenericRepository<User> _target;
+        _context = new InvestagerCoreContext(new Mock<IConfiguration>().Object, contextOptions);
+        _context.Database.EnsureDeleted();
+        _context.Database.EnsureCreated();
 
-        public CoreGenericRepositoryUnitTests()
-        {
-            var contextOptions = new DbContextOptionsBuilder<InvestagerCoreContext>()
-                .UseSqlite("Filename=TestCore.db")
-                .Options;
+        _target = new CoreGenericRepository<User>(_context);
+    }
 
-            _context = new InvestagerCoreContext(new Mock<IConfiguration>().Object, contextOptions);
-            _context.Database.EnsureDeleted();
-            _context.Database.EnsureCreated();
-
-            _target = new CoreGenericRepository<User>(_context);
-        }
-
-        [Fact]
-        public async Task GetAll_ReturnsExpectedEntities()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task GetAll_ReturnsExpectedEntities()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -59,29 +59,29 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.GetAll();
+        // Act
+        var response = await _target.GetAll();
 
-            // Assert
-            response.Should().BeEquivalentTo(users);
-        }
+        // Assert
+        response.Should().BeEquivalentTo(users);
+    }
 
-        [Fact]
-        public async Task GetAll_DoesNotIncludeRelationships()
+    [Fact]
+    public async Task GetAll_DoesNotIncludeRelationships()
+    {
+        // Arrange
+        var user = new User
         {
-            // Arrange
-            var user = new User
-            {
-                Id = 104,
-                DisplayName = "Dhurata",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
-                Watchlists = new List<Watchlist>
+            Id = 104,
+            DisplayName = "Dhurata",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+            Watchlists = new List<Watchlist>
                 {
                     new Watchlist
                     {
@@ -90,45 +90,45 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                         Name = "Default",
                     },
                 },
-            };
+        };
 
-            await AddUsers(new List<User> { user });
+        await AddUsers(new List<User> { user });
 
-            // Act
-            var responseUsers = await _target.GetAll();
+        // Act
+        var responseUsers = await _target.GetAll();
 
-            // Assert
-            var response = responseUsers.Single();
-            response.Id.Should().Be(user.Id);
-            response.DisplayName.Should().Be(user.DisplayName);
-            response.Email.Should().Be(user.Email);
-            response.Watchlists.Should().BeNull();
-        }
+        // Assert
+        var response = responseUsers.Single();
+        response.Id.Should().Be(user.Id);
+        response.DisplayName.Should().Be(user.DisplayName);
+        response.Email.Should().Be(user.Email);
+        response.Watchlists.Should().BeNull();
+    }
 
-        [Fact]
-        public async Task GetAll_WhenNoEntry_ReturnsEmptyList()
+    [Fact]
+    public async Task GetAll_WhenNoEntry_ReturnsEmptyList()
+    {
+        // Act
+        var response = await _target.GetAll();
+
+        // Assert
+        response.Count().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetAllWithIncludable_IncludesRelationships()
+    {
+        // Arrange
+        var user = new User
         {
-            // Act
-            var response = await _target.GetAll();
-
-            // Assert
-            response.Count().Should().Be(0);
-        }
-
-        [Fact]
-        public async Task GetAllWithIncludable_IncludesRelationships()
-        {
-            // Arrange
-            var user = new User
-            {
-                Id = 104,
-                DisplayName = "Dhurata",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
-                RefreshTokens = new List<RefreshToken>
+            Id = 104,
+            DisplayName = "Dhurata",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+            RefreshTokens = new List<RefreshToken>
                 {
                     new RefreshToken
                     {
@@ -138,7 +138,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                         LastUsedAt = new DateTime(2021, 10, 10),
                     },
                 },
-                Watchlists = new List<Watchlist>
+            Watchlists = new List<Watchlist>
                 {
                     new Watchlist
                     {
@@ -147,86 +147,86 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                         Name = "Default",
                     },
                 },
-            };
+        };
 
-            await AddUsers(new List<User> { user });
+        await AddUsers(new List<User> { user });
 
-            // Act
-            var responseUsers = await _target.GetAll(e => e.Include(x => x.Watchlists));
+        // Act
+        var responseUsers = await _target.GetAll(e => e.Include(x => x.Watchlists));
 
-            // Assert
-            var response = responseUsers.Single();
-            response.Id.Should().Be(user.Id);
-            response.DisplayName.Should().Be(user.DisplayName);
-            response.Email.Should().Be(user.Email);
+        // Assert
+        var response = responseUsers.Single();
+        response.Id.Should().Be(user.Id);
+        response.DisplayName.Should().Be(user.DisplayName);
+        response.Email.Should().Be(user.Email);
 
-            var watchlist = user.Watchlists.Single();
-            var responseWatchlist = response.Watchlists.Single();
-            responseWatchlist.Id.Should().Be(watchlist.Id);
-            responseWatchlist.Name.Should().Be(watchlist.Name);
+        var watchlist = user.Watchlists.Single();
+        var responseWatchlist = response.Watchlists.Single();
+        responseWatchlist.Id.Should().Be(watchlist.Id);
+        responseWatchlist.Name.Should().Be(watchlist.Name);
 
-            response.RefreshTokens.Should().BeNull();
-        }
+        response.RefreshTokens.Should().BeNull();
+    }
 
-        [Fact]
-        public async Task GetAllWithIncludable_WhenNoEntry_ReturnsEmptyList()
+    [Fact]
+    public async Task GetAllWithIncludable_WhenNoEntry_ReturnsEmptyList()
+    {
+        // Act
+        var response = await _target.GetAll(e => e.Include(x => x.Watchlists));
+
+        // Assert
+        response.Count().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetByIdWithTracking_AllowsEdits()
+    {
+        // Arrange
+        var user = new User
         {
-            // Act
-            var response = await _target.GetAll(e => e.Include(x => x.Watchlists));
+            Id = 104,
+            DisplayName = "Dhurata",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 }
+        };
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        await AddUsers(new List<User> { user });
 
-        [Fact]
-        public async Task GetByIdWithTracking_AllowsEdits()
-        {
-            // Arrange
-            var user = new User
-            {
-                Id = 104,
-                DisplayName = "Dhurata",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 }
-            };
+        // Act
+        var response = await _target.GetByIdWithTracking(user.Id);
 
-            await AddUsers(new List<User> { user });
+        // Assert
+        response.Id.Should().Be(user.Id);
+        response.DisplayName.Should().Be(user.DisplayName);
+        response.Email.Should().Be(user.Email);
 
-            // Act
-            var response = await _target.GetByIdWithTracking(user.Id);
+        var newName = "gigino";
+        response.DisplayName = newName;
+        await _context.SaveChangesAsync();
 
-            // Assert
-            response.Id.Should().Be(user.Id);
-            response.DisplayName.Should().Be(user.DisplayName);
-            response.Email.Should().Be(user.Email);
+        var updatedUser = await _target.GetByIdWithTracking(user.Id);
+        updatedUser.DisplayName.Should().Be(newName);
+    }
 
-            var newName = "gigino";
-            response.DisplayName = newName;
-            await _context.SaveChangesAsync();
+    [Fact]
+    public async Task GetByIdWithTracking_WhenEntityNotFound_Throws()
+    {
+        // Act
+        Func<Task> act = async () => await _target.GetByIdWithTracking(2);
 
-            var updatedUser = await _target.GetByIdWithTracking(user.Id);
-            updatedUser.DisplayName.Should().Be(newName);
-        }
+        // Assert
+        await act.Should().ThrowAsync<Exception>()
+            .WithMessage("Entity not found.");
+    }
 
-        [Fact]
-        public async Task GetByIdWithTracking_WhenEntityNotFound_Throws()
-        {
-            // Act
-            Func<Task> act = async () => await _target.GetByIdWithTracking(2);
-
-            // Assert
-            await act.Should().ThrowAsync<Exception>()
-                .WithMessage("Entity not found.");
-        }
-
-        [Fact]
-        public async Task Find_ReturnsExpectedEntities()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task Find_ReturnsExpectedEntities()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -260,25 +260,25 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(e => e.Theme == Theme.Dark);
+        // Act
+        var response = await _target.Find(e => e.Theme == Theme.Dark);
 
-            // Assert
-            var usersArray = users.ToArray();
-            response.Count().Should().Be(2);
+        // Assert
+        var usersArray = users.ToArray();
+        response.Count().Should().Be(2);
 
-            var responseArray = response.ToArray();
-            responseArray[0].Should().BeEquivalentTo(usersArray[1]);
-            responseArray[1].Should().BeEquivalentTo(usersArray[2]);
-        }
+        var responseArray = response.ToArray();
+        responseArray[0].Should().BeEquivalentTo(usersArray[1]);
+        responseArray[1].Should().BeEquivalentTo(usersArray[2]);
+    }
 
-        [Fact]
-        public async Task Find_WhenNoMatch_ReturnsEmptyArray()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task Find_WhenNoMatch_ReturnsEmptyArray()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -292,30 +292,30 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(e => e.Id == 101);
+        // Act
+        var response = await _target.Find(e => e.Id == 101);
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task Find_WhenNoEntities_ReturnsEmptyArray()
-        {
-            // Act
-            var response = await _target.Find(e => e.Id == 101);
+    [Fact]
+    public async Task Find_WhenNoEntities_ReturnsEmptyArray()
+    {
+        // Act
+        var response = await _target.Find(e => e.Id == 101);
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task FindWithInclude_ReturnsExpectedEntities()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task FindWithInclude_ReturnsExpectedEntities()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -372,26 +372,26 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(
-                e => e.Id == 104,
-                e => e.Include(x => x.Watchlists)
-                    .ThenInclude(x => x.Assets));
+        // Act
+        var response = await _target.Find(
+            e => e.Id == 104,
+            e => e.Include(x => x.Watchlists)
+                .ThenInclude(x => x.Assets));
 
-            // Assert
-            var responseUser = response.Single();
-            responseUser.RefreshTokens.Should().BeNull();
-            var watchlistAssets = responseUser.Watchlists.Single().Assets;
-            watchlistAssets.Single().Asset.Should().BeNull();
-        }
+        // Assert
+        var responseUser = response.Single();
+        responseUser.RefreshTokens.Should().BeNull();
+        var watchlistAssets = responseUser.Watchlists.Single().Assets;
+        watchlistAssets.Single().Asset.Should().BeNull();
+    }
 
-        [Fact]
-        public async Task FindWithInclude_WhenNoMatch_ReturnsEmptyArray()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task FindWithInclude_WhenNoMatch_ReturnsEmptyArray()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -415,34 +415,34 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(
-                e => e.Id == 101,
-                e => e.Include(x => x.RefreshTokens));
+        // Act
+        var response = await _target.Find(
+            e => e.Id == 101,
+            e => e.Include(x => x.RefreshTokens));
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task FindWithInclude_WhenNoEntities_ReturnsEmptyArray()
-        {
-            // Act
-            var response = await _target.Find(
-                e => e.Id == 101,
-                e => e.Include(x => x.RefreshTokens));
+    [Fact]
+    public async Task FindWithInclude_WhenNoEntities_ReturnsEmptyArray()
+    {
+        // Act
+        var response = await _target.Find(
+            e => e.Id == 101,
+            e => e.Include(x => x.RefreshTokens));
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task FindWithTake_ReturnsExpectedEntities()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task FindWithTake_ReturnsExpectedEntities()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -476,22 +476,22 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(e => e.Theme == Theme.Dark, 1);
+        // Act
+        var response = await _target.Find(e => e.Theme == Theme.Dark, 1);
 
-            // Assert
-            var usersArray = users.ToArray();
+        // Assert
+        var usersArray = users.ToArray();
 
-            response.Single().Should().BeEquivalentTo(usersArray[1]);
-        }
+        response.Single().Should().BeEquivalentTo(usersArray[1]);
+    }
 
-        [Fact]
-        public async Task FindWithTake_WhenNoMatch_ReturnsEmptyArray()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task FindWithTake_WhenNoMatch_ReturnsEmptyArray()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -505,30 +505,30 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(e => e.Id == 101, 5);
+        // Act
+        var response = await _target.Find(e => e.Id == 101, 5);
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task FindWithTake_WhenNoEntities_ReturnsEmptyArray()
-        {
-            // Act
-            var response = await _target.Find(e => e.Id == 101, 5);
+    [Fact]
+    public async Task FindWithTake_WhenNoEntities_ReturnsEmptyArray()
+    {
+        // Act
+        var response = await _target.Find(e => e.Id == 101, 5);
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task FindWithOrderAndTake_ReturnsExpectedEntities()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task FindWithOrderAndTake_ReturnsExpectedEntities()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -562,22 +562,22 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(e => e.Theme == Theme.Dark, e => e.OrderByDescending(x => x.Id), 1);
+        // Act
+        var response = await _target.Find(e => e.Theme == Theme.Dark, e => e.OrderByDescending(x => x.Id), 1);
 
-            // Assert
-            var usersArray = users.ToArray();
+        // Assert
+        var usersArray = users.ToArray();
 
-            response.Single().Should().BeEquivalentTo(usersArray[2]);
-        }
+        response.Single().Should().BeEquivalentTo(usersArray[2]);
+    }
 
-        [Fact]
-        public async Task FindWithOrderAndTake_WhenNoMatch_ReturnsEmptyArray()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public async Task FindWithOrderAndTake_WhenNoMatch_ReturnsEmptyArray()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -591,85 +591,85 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            var response = await _target.Find(e => e.Id == 101, e => e.OrderByDescending(x => x.Id), 5);
+        // Act
+        var response = await _target.Find(e => e.Id == 101, e => e.OrderByDescending(x => x.Id), 5);
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task FindWithOrderAndTake_WhenNoEntities_ReturnsEmptyArray()
+    [Fact]
+    public async Task FindWithOrderAndTake_WhenNoEntities_ReturnsEmptyArray()
+    {
+        // Act
+        var response = await _target.Find(e => e.Id == 101, e => e.OrderByDescending(x => x.Id), 5);
+
+        // Assert
+        response.Count().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Add_WhenEntityDoesNotExist_AddsEntity()
+    {
+        // Arrange
+        var user = new User
         {
-            // Act
-            var response = await _target.Find(e => e.Id == 101, e => e.OrderByDescending(x => x.Id), 5);
+            Id = 385,
+            DisplayName = "Dhurata",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+        };
 
-            // Assert
-            response.Count().Should().Be(0);
-        }
+        // Act
+        _target.Add(user);
+        await _context.SaveChangesAsync();
 
-        [Fact]
-        public async Task Add_WhenEntityDoesNotExist_AddsEntity()
+        // Assert
+        var response = await _target.GetAll();
+
+        response.Single().Should().BeEquivalentTo(user);
+    }
+
+    [Fact]
+    public async Task Add_WhenEntityExists_Throws()
+    {
+        // Arrange
+        var user = new User
         {
-            // Arrange
-            var user = new User
-            {
-                Id = 385,
-                DisplayName = "Dhurata",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
-            };
+            Id = 385,
+            DisplayName = "Dhurata",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+        };
 
-            // Act
-            _target.Add(user);
-            await _context.SaveChangesAsync();
-
-            // Assert
-            var response = await _target.GetAll();
-
-            response.Single().Should().BeEquivalentTo(user);
-        }
-
-        [Fact]
-        public async Task Add_WhenEntityExists_Throws()
-        {
-            // Arrange
-            var user = new User
-            {
-                Id = 385,
-                DisplayName = "Dhurata",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
-            };
-
-            var users = new List<User>
+        var users = new List<User>
             {
                 user,
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            _target.Add(user);
-            Func<Task> act = async () => await _context.SaveChangesAsync();
+        // Act
+        _target.Add(user);
+        Func<Task> act = async () => await _context.SaveChangesAsync();
 
-            // Assert
-            await act.Should().ThrowAsync<DbUpdateException>();
-        }
+        // Assert
+        await act.Should().ThrowAsync<DbUpdateException>();
+    }
 
-        [Fact]
-        public async Task Add_WhenProvidingRelatedEntityId_CreatesEntityCorrectly()
-        {
-            // Arrange
-            var currencies = new List<Currency>
+    [Fact]
+    public async Task Add_WhenProvidingRelatedEntityId_CreatesEntityCorrectly()
+    {
+        // Arrange
+        var currencies = new List<Currency>
             {
                 new Currency
                 {
@@ -687,151 +687,88 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddCurrencies(currencies);
+        await AddCurrencies(currencies);
 
-            var target = new CoreGenericRepository<CurrencyPair>(_context);
+        var target = new CoreGenericRepository<CurrencyPair>(_context);
 
-            var pairToAdd = new CurrencyPair
-            {
-                FirstCurrencyId = 104,
-                SecondCurrencyId = 385,
-                HasTimeData = true,
-                Provider = DataProviders.CoinGecko,
-            };
-
-            // Act
-            target.Add(pairToAdd);
-            await _context.SaveChangesAsync();
-
-            // Assert
-            _context.ChangeTracker.Clear();
-            var pairs = await target.GetAll(e => e.Include(x => x.FirstCurrency).Include(x => x.SecondCurrency));
-            var pair = pairs.Single();
-            pair.FirstCurrency.Should().BeEquivalentTo(currencies.Single(e => e.Code == "eth"));
-            pair.SecondCurrency.Should().BeEquivalentTo(currencies.Single(e => e.Code == "usd"));
-            pair.HasTimeData.Should().BeTrue();
-            pair.Provider.Should().Be(DataProviders.CoinGecko);
-        }
-
-        [Fact]
-        public void Add_WhenCreatingNewRelatedEntities_Throws()
+        var pairToAdd = new CurrencyPair
         {
-            // Arrange
-            var firstPair = new CurrencyPair
-            {
-                FirstCurrency = new Currency
-                {
-                    Code = "eth",
-                    Name = "Ethereum",
-                    Type = CurrencyType.Crypto,
-                },
-                SecondCurrency = new Currency
-                {
-                    Code = "usd",
-                    Name = "KKona Dollar",
-                    Type = CurrencyType.Fiat,
-                },
-                HasTimeData = true,
-                Provider = DataProviders.CoinGecko,
-            };
+            FirstCurrencyId = 104,
+            SecondCurrencyId = 385,
+            HasTimeData = true,
+            Provider = DataProviders.CoinGecko,
+        };
 
-            var secondPair = new CurrencyPair
-            {
-                FirstCurrency = new Currency
-                {
-                    Code = "btc",
-                    Name = "Bitcoin",
-                    Type = CurrencyType.Crypto,
-                },
-                SecondCurrency = new Currency
-                {
-                    Code = "usd",
-                    Name = "KKona Dollar",
-                    Type = CurrencyType.Fiat,
-                },
-                HasTimeData = true,
-                Provider = DataProviders.CoinGecko,
-            };
+        // Act
+        target.Add(pairToAdd);
+        await _context.SaveChangesAsync();
 
-            var target = new CoreGenericRepository<CurrencyPair>(_context);
+        // Assert
+        _context.ChangeTracker.Clear();
+        var pairs = await target.GetAll(e => e.Include(x => x.FirstCurrency).Include(x => x.SecondCurrency));
+        var pair = pairs.Single();
+        pair.FirstCurrency.Should().BeEquivalentTo(currencies.Single(e => e.Code == "eth"));
+        pair.SecondCurrency.Should().BeEquivalentTo(currencies.Single(e => e.Code == "usd"));
+        pair.HasTimeData.Should().BeTrue();
+        pair.Provider.Should().Be(DataProviders.CoinGecko);
+    }
 
-            // Act
-            target.Add(firstPair);
-            target.Add(secondPair);
-            Func<Task> act = async () => await _context.SaveChangesAsync();
-
-            // Assert
-            act.Should().ThrowAsync<DbUpdateException>();
-        }
-
-        [Fact]
-        public async Task Update_ModifiesFields()
+    [Fact]
+    public void Add_WhenCreatingNewRelatedEntities_Throws()
+    {
+        // Arrange
+        var firstPair = new CurrencyPair
         {
-            // Arrange
-            var users = new List<User>
+            FirstCurrency = new Currency
             {
-                new User
-                {
-                    Id = 385,
-                    DisplayName = "Dhurata",
-                    DisplayEmail = "dhuraTa@email.com",
-                    Email = "dhurata@email.com",
-                    Theme = Theme.Dark,
-                    PasswordHash = new byte[] { 11, 14 },
-                    PasswordSalt = new byte[] { 99, 102 },
-                },
-            };
-
-            await AddUsers(users);
-
-            var updatedUser = new User
+                Code = "eth",
+                Name = "Ethereum",
+                Type = CurrencyType.Crypto,
+            },
+            SecondCurrency = new Currency
             {
-                Id = 385,
-                DisplayName = "Dhurata Dora",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
-            };
+                Code = "usd",
+                Name = "KKona Dollar",
+                Type = CurrencyType.Fiat,
+            },
+            HasTimeData = true,
+            Provider = DataProviders.CoinGecko,
+        };
 
-            // Act
-            _target.Update(updatedUser);
-            await _context.SaveChangesAsync();
-
-            // Assert
-            var response = await _target.GetAll();
-            response.Single().Should().BeEquivalentTo(updatedUser);
-        }
-
-        [Fact]
-        public void Update_WhenEntityDoesNotExist_Throws()
+        var secondPair = new CurrencyPair
         {
-            // Arrange
-            var updatedUser = new User
+            FirstCurrency = new Currency
             {
-                Id = 385,
-                DisplayName = "Dhurata Dora",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
-            };
+                Code = "btc",
+                Name = "Bitcoin",
+                Type = CurrencyType.Crypto,
+            },
+            SecondCurrency = new Currency
+            {
+                Code = "usd",
+                Name = "KKona Dollar",
+                Type = CurrencyType.Fiat,
+            },
+            HasTimeData = true,
+            Provider = DataProviders.CoinGecko,
+        };
 
-            // Act
-            _target.Update(updatedUser);
-            Func<Task> act = async () => await _context.SaveChangesAsync();
+        var target = new CoreGenericRepository<CurrencyPair>(_context);
 
-            // Assert
-            act.Should().ThrowAsync<DbUpdateException>();
-        }
+        // Act
+        target.Add(firstPair);
+        target.Add(secondPair);
+        Func<Task> act = async () => await _context.SaveChangesAsync();
 
-        [Fact]
-        public async Task DeleteById_WhenEntityExists_RemovesEntity()
-        {
-            // Arrange
-            var users = new List<User>
+        // Assert
+        act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task Update_ModifiesFields()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -845,32 +782,56 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            _target.Delete(users.First().Id);
-            await _context.SaveChangesAsync();
-
-            // Assert
-            var response = await _target.GetAll();
-            response.Count().Should().Be(0);
-        }
-
-        [Fact]
-        public void DeleteById_WhenEntityDoesNotExist_Throws()
+        var updatedUser = new User
         {
-            // Act
-            Action act = () => _target.Delete(385);
+            Id = 385,
+            DisplayName = "Dhurata Dora",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+        };
 
-            // Assert
-            act.Should().Throw<ArgumentNullException>();
-        }
+        // Act
+        _target.Update(updatedUser);
+        await _context.SaveChangesAsync();
 
-        [Fact]
-        public async Task DeleteByEntity_WhenEntityUntracked_RemovesEntity()
+        // Assert
+        var response = await _target.GetAll();
+        response.Single().Should().BeEquivalentTo(updatedUser);
+    }
+
+    [Fact]
+    public void Update_WhenEntityDoesNotExist_Throws()
+    {
+        // Arrange
+        var updatedUser = new User
         {
-            // Arrange
-            var users = new List<User>
+            Id = 385,
+            DisplayName = "Dhurata Dora",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+        };
+
+        // Act
+        _target.Update(updatedUser);
+        Func<Task> act = async () => await _context.SaveChangesAsync();
+
+        // Assert
+        act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    [Fact]
+    public async Task DeleteById_WhenEntityExists_RemovesEntity()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -884,22 +845,32 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            // Act
-            _target.Delete(users.First());
-            await _context.SaveChangesAsync();
+        // Act
+        _target.Delete(users.First().Id);
+        await _context.SaveChangesAsync();
 
-            // Assert
-            var response = await _target.GetAll();
-            response.Count().Should().Be(0);
-        }
+        // Assert
+        var response = await _target.GetAll();
+        response.Count().Should().Be(0);
+    }
 
-        [Fact]
-        public async Task DeleteByEntity_WhenEntityTracked_RemovesEntity()
-        {
-            // Arrange
-            var users = new List<User>
+    [Fact]
+    public void DeleteById_WhenEntityDoesNotExist_Throws()
+    {
+        // Act
+        Action act = () => _target.Delete(385);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task DeleteByEntity_WhenEntityUntracked_RemovesEntity()
+    {
+        // Arrange
+        var users = new List<User>
             {
                 new User
                 {
@@ -913,54 +884,82 @@ namespace Investager.Infrastructure.UnitTests.Persistence
                 },
             };
 
-            await AddUsers(users);
+        await AddUsers(users);
 
-            var user = await _target.GetByIdWithTracking(users.First().Id);
+        // Act
+        _target.Delete(users.First());
+        await _context.SaveChangesAsync();
 
-            // Act
-            _target.Delete(user);
-            await _context.SaveChangesAsync();
+        // Assert
+        var response = await _target.GetAll();
+        response.Count().Should().Be(0);
+    }
 
-            // Assert
-            var response = await _target.GetAll();
-            response.Count().Should().Be(0);
-        }
-
-        [Fact]
-        public void DeleteByEntity_WhenEntityDoesNotExist_Throws()
-        {
-            // Arrange
-            var user = new User
+    [Fact]
+    public async Task DeleteByEntity_WhenEntityTracked_RemovesEntity()
+    {
+        // Arrange
+        var users = new List<User>
             {
-                Id = 385,
-                DisplayName = "Dhurata",
-                DisplayEmail = "dhuraTa@email.com",
-                Email = "dhurata@email.com",
-                Theme = Theme.Dark,
-                PasswordHash = new byte[] { 11, 14 },
-                PasswordSalt = new byte[] { 99, 102 },
+                new User
+                {
+                    Id = 385,
+                    DisplayName = "Dhurata",
+                    DisplayEmail = "dhuraTa@email.com",
+                    Email = "dhurata@email.com",
+                    Theme = Theme.Dark,
+                    PasswordHash = new byte[] { 11, 14 },
+                    PasswordSalt = new byte[] { 99, 102 },
+                },
             };
 
-            // Act
-            _target.Delete(user);
-            Func<Task> act = async () => await _context.SaveChangesAsync();
+        await AddUsers(users);
 
-            // Assert
-            act.Should().ThrowAsync<DbUpdateException>();
-        }
+        var user = await _target.GetByIdWithTracking(users.First().Id);
 
-        private async Task AddUsers(IList<User> users)
+        // Act
+        _target.Delete(user);
+        await _context.SaveChangesAsync();
+
+        // Assert
+        var response = await _target.GetAll();
+        response.Count().Should().Be(0);
+    }
+
+    [Fact]
+    public void DeleteByEntity_WhenEntityDoesNotExist_Throws()
+    {
+        // Arrange
+        var user = new User
         {
-            await _context.AddRangeAsync(users);
-            await _context.SaveChangesAsync();
-            _context.ChangeTracker.Clear();
-        }
+            Id = 385,
+            DisplayName = "Dhurata",
+            DisplayEmail = "dhuraTa@email.com",
+            Email = "dhurata@email.com",
+            Theme = Theme.Dark,
+            PasswordHash = new byte[] { 11, 14 },
+            PasswordSalt = new byte[] { 99, 102 },
+        };
 
-        private async Task AddCurrencies(IList<Currency> currencies)
-        {
-            await _context.AddRangeAsync(currencies);
-            await _context.SaveChangesAsync();
-            _context.ChangeTracker.Clear();
-        }
+        // Act
+        _target.Delete(user);
+        Func<Task> act = async () => await _context.SaveChangesAsync();
+
+        // Assert
+        act.Should().ThrowAsync<DbUpdateException>();
+    }
+
+    private async Task AddUsers(IList<User> users)
+    {
+        await _context.AddRangeAsync(users);
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
+    }
+
+    private async Task AddCurrencies(IList<Currency> currencies)
+    {
+        await _context.AddRangeAsync(currencies);
+        await _context.SaveChangesAsync();
+        _context.ChangeTracker.Clear();
     }
 }

@@ -1,13 +1,12 @@
-﻿namespace Investager.Infrastructure.Logging
+﻿namespace Investager.Infrastructure.Logging;
+
+public enum UILogLevel
 {
-    public enum UILogLevel
-    {
-        Debug,
+    Debug,
 
-        Information,
+    Information,
 
-        Warning,
+    Warning,
 
-        Error,
-    }
+    Error,
 }

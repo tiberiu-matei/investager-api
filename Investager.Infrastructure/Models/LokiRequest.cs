@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace Investager.Infrastructure.Models
+namespace Investager.Infrastructure.Models;
+
+public class LokiRequest
 {
-    public class LokiRequest
-    {
-        public IEnumerable<LokiStream> Streams { get; set; }
-    }
+    public IEnumerable<LokiStream> Streams { get; set; }
 }

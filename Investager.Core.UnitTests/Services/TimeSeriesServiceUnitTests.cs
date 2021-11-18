@@ -8,66 +8,66 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Investager.Core.UnitTests.Services
+namespace Investager.Core.UnitTests.Services;
+
+public class TimeSeriesServiceUnitTests
 {
-    public class TimeSeriesServiceUnitTests
+    private readonly Mock<ITimeSeriesRepository> _mockTimeSeriesRepository = new Mock<ITimeSeriesRepository>();
+    private readonly Mock<ICache> _mockCache = new Mock<ICache>();
+    private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
+
+    private readonly TimeSeriesService _target;
+
+    public TimeSeriesServiceUnitTests()
     {
-        private readonly Mock<ITimeSeriesRepository> _mockTimeSeriesRepository = new Mock<ITimeSeriesRepository>();
-        private readonly Mock<ICache> _mockCache = new Mock<ICache>();
-        private readonly Mock<ITimeHelper> _mockTimeHelper = new Mock<ITimeHelper>();
+        _target = new TimeSeriesService(
+            _mockTimeSeriesRepository.Object,
+            _mockCache.Object,
+            _mockTimeHelper.Object);
+    }
 
-        private readonly TimeSeriesService _target;
+    [Fact]
+    public async Task Get_ReturnsCacheData()
+    {
+        // Assert
+        var key = "NASDAQ:ZM";
 
-        public TimeSeriesServiceUnitTests()
+        var timeSeries = new TimeSeriesSummary
         {
-            _target = new TimeSeriesService(
-                _mockTimeSeriesRepository.Object,
-                _mockCache.Object,
-                _mockTimeHelper.Object);
-        }
-
-        [Fact]
-        public async Task Get_ReturnsCacheData()
-        {
-            // Assert
-            var key = "NASDAQ:ZM";
-
-            var timeSeries = new TimeSeriesSummary
-            {
-                Key = key,
-                Points = new List<TimePointResponse>
+            Key = key,
+            Points = new List<TimePointResponse>
                 {
                     new TimePointResponse { Time = new DateTime(2021, 02, 02), Value = 103.5f },
                 },
-                GainLoss = new GainLossResponse
-                {
-                    Last2Weeks = 3.01f,
-                },
-            };
-
-            _mockCache.Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>())).ReturnsAsync(timeSeries);
-
-            // Act
-            var response = await _target.Get(key);
-
-            // Assert
-            response.Should().Be(timeSeries);
-            _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task Get_CalculatesGainLossDataCorrectly()
-        {
-            // Assert
-            var key = "NASDAQ:ZM";
-
-            var utcNow = new DateTime(2021, 04, 20, 13, 37, 00, DateTimeKind.Utc);
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(utcNow);
-
-            var timeSeriesResponse = new TimeSeriesResponse
+            GainLoss = new GainLossResponse
             {
-                Key = key,
-                Points = new List<TimePointResponse>
+                Last2Weeks = 3.01f,
+            },
+        };
+
+        _mockCache.Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>())).ReturnsAsync(timeSeries);
+
+        // Act
+        var response = await _target.Get(key);
+
+        // Assert
+        response.Should().Be(timeSeries);
+        _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Get_CalculatesGainLossDataCorrectly()
+    {
+        // Assert
+        var key = "NASDAQ:ZM";
+
+        var utcNow = new DateTime(2021, 04, 20, 13, 37, 00, DateTimeKind.Utc);
+        _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(utcNow);
+
+        var timeSeriesResponse = new TimeSeriesResponse
+        {
+            Key = key,
+            Points = new List<TimePointResponse>
                 {
                     new TimePointResponse
                     {
@@ -130,94 +130,94 @@ namespace Investager.Core.UnitTests.Services
                         Value = 401.15f,
                     },
                 },
-            };
+        };
 
-            _mockTimeSeriesRepository
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(timeSeriesResponse);
+        _mockTimeSeriesRepository
+            .Setup(e => e.Get(It.IsAny<string>()))
+            .ReturnsAsync(timeSeriesResponse);
 
-            Func<Task<TimeSeriesSummary>> getDataFunc = null;
+        Func<Task<TimeSeriesSummary>> getDataFunc = null;
 
-            _mockCache
-                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>()))
-                .ReturnsAsync(new TimeSeriesSummary())
-                .Callback((string key, Func<Task<TimeSeriesSummary>> func) => getDataFunc = func);
+        _mockCache
+            .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>()))
+            .ReturnsAsync(new TimeSeriesSummary())
+            .Callback((string key, Func<Task<TimeSeriesSummary>> func) => getDataFunc = func);
 
-            // Act
-            await _target.Get(key);
-            var response = await getDataFunc.Invoke();
+        // Act
+        await _target.Get(key);
+        var response = await getDataFunc.Invoke();
 
-            // Assert
-            _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
-            _mockTimeSeriesRepository.Verify(e => e.Get(key), Times.Once);
-            response.Points.Should().BeEquivalentTo(timeSeriesResponse.Points);
-            response.Key.Should().Be(key);
-            response.GainLoss.Last3Days.Should().Be(23.445642f);
-            response.GainLoss.LastWeek.Should().Be(-37.065742f);
-            response.GainLoss.Last2Weeks.Should().Be(27.8572731f);
-            response.GainLoss.LastMonth.Should().Be(72.76076f);
-            response.GainLoss.Last3Months.Should().Be(35.0610771f);
-            response.GainLoss.LastYear.Should().Be(65.88457f);
-            response.GainLoss.Last3Years.Should().Be(-4.000743f);
-        }
+        // Assert
+        _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
+        _mockTimeSeriesRepository.Verify(e => e.Get(key), Times.Once);
+        response.Points.Should().BeEquivalentTo(timeSeriesResponse.Points);
+        response.Key.Should().Be(key);
+        response.GainLoss.Last3Days.Should().Be(23.445642f);
+        response.GainLoss.LastWeek.Should().Be(-37.065742f);
+        response.GainLoss.Last2Weeks.Should().Be(27.8572731f);
+        response.GainLoss.LastMonth.Should().Be(72.76076f);
+        response.GainLoss.Last3Months.Should().Be(35.0610771f);
+        response.GainLoss.LastYear.Should().Be(65.88457f);
+        response.GainLoss.Last3Years.Should().Be(-4.000743f);
+    }
 
-        [Fact]
-        public async Task Get_WhenNoPoints_ReturnsEmptyGainLoss()
+    [Fact]
+    public async Task Get_WhenNoPoints_ReturnsEmptyGainLoss()
+    {
+        // Assert
+        var key = "NASDAQ:ZM";
+
+        var utcNow = new DateTime(2021, 04, 20, 13, 37, 00, DateTimeKind.Utc);
+        _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(utcNow);
+
+        var timeSeriesResponse = new TimeSeriesResponse
         {
-            // Assert
-            var key = "NASDAQ:ZM";
+            Key = key,
+            Points = new List<TimePointResponse>(),
+        };
 
-            var utcNow = new DateTime(2021, 04, 20, 13, 37, 00, DateTimeKind.Utc);
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(utcNow);
+        _mockTimeSeriesRepository
+            .Setup(e => e.Get(It.IsAny<string>()))
+            .ReturnsAsync(timeSeriesResponse);
 
-            var timeSeriesResponse = new TimeSeriesResponse
-            {
-                Key = key,
-                Points = new List<TimePointResponse>(),
-            };
+        Func<Task<TimeSeriesSummary>> getDataFunc = null;
 
-            _mockTimeSeriesRepository
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(timeSeriesResponse);
+        _mockCache
+            .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>()))
+            .ReturnsAsync(new TimeSeriesSummary())
+            .Callback((string key, Func<Task<TimeSeriesSummary>> func) => getDataFunc = func);
 
-            Func<Task<TimeSeriesSummary>> getDataFunc = null;
+        // Act
+        await _target.Get(key);
+        var response = await getDataFunc.Invoke();
 
-            _mockCache
-                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>()))
-                .ReturnsAsync(new TimeSeriesSummary())
-                .Callback((string key, Func<Task<TimeSeriesSummary>> func) => getDataFunc = func);
+        // Assert
+        _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
+        _mockTimeSeriesRepository.Verify(e => e.Get(key), Times.Once);
+        response.Points.Should().BeEquivalentTo(timeSeriesResponse.Points);
+        response.Key.Should().Be(key);
+        response.GainLoss.Last3Days.Should().BeNull();
+        response.GainLoss.LastWeek.Should().BeNull();
+        response.GainLoss.Last2Weeks.Should().BeNull();
+        response.GainLoss.LastMonth.Should().BeNull();
+        response.GainLoss.Last3Months.Should().BeNull();
+        response.GainLoss.LastYear.Should().BeNull();
+        response.GainLoss.Last3Years.Should().BeNull();
+    }
 
-            // Act
-            await _target.Get(key);
-            var response = await getDataFunc.Invoke();
+    [Fact]
+    public async Task Get_WhenPointsTooFar_ReturnsEmptyGainLoss()
+    {
+        // Assert
+        var key = "NASDAQ:ZM";
 
-            // Assert
-            _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
-            _mockTimeSeriesRepository.Verify(e => e.Get(key), Times.Once);
-            response.Points.Should().BeEquivalentTo(timeSeriesResponse.Points);
-            response.Key.Should().Be(key);
-            response.GainLoss.Last3Days.Should().BeNull();
-            response.GainLoss.LastWeek.Should().BeNull();
-            response.GainLoss.Last2Weeks.Should().BeNull();
-            response.GainLoss.LastMonth.Should().BeNull();
-            response.GainLoss.Last3Months.Should().BeNull();
-            response.GainLoss.LastYear.Should().BeNull();
-            response.GainLoss.Last3Years.Should().BeNull();
-        }
+        var utcNow = new DateTime(2021, 04, 20, 13, 37, 00, DateTimeKind.Utc);
+        _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(utcNow);
 
-        [Fact]
-        public async Task Get_WhenPointsTooFar_ReturnsEmptyGainLoss()
+        var timeSeriesResponse = new TimeSeriesResponse
         {
-            // Assert
-            var key = "NASDAQ:ZM";
-
-            var utcNow = new DateTime(2021, 04, 20, 13, 37, 00, DateTimeKind.Utc);
-            _mockTimeHelper.Setup(e => e.GetUtcNow()).Returns(utcNow);
-
-            var timeSeriesResponse = new TimeSeriesResponse
-            {
-                Key = key,
-                Points = new List<TimePointResponse>
+            Key = key,
+            Points = new List<TimePointResponse>
                 {
                     new TimePointResponse
                     {
@@ -255,35 +255,34 @@ namespace Investager.Core.UnitTests.Services
                         Value = 401.15f,
                     },
                 },
-            };
+        };
 
-            _mockTimeSeriesRepository
-                .Setup(e => e.Get(It.IsAny<string>()))
-                .ReturnsAsync(timeSeriesResponse);
+        _mockTimeSeriesRepository
+            .Setup(e => e.Get(It.IsAny<string>()))
+            .ReturnsAsync(timeSeriesResponse);
 
-            Func<Task<TimeSeriesSummary>> getDataFunc = null;
+        Func<Task<TimeSeriesSummary>> getDataFunc = null;
 
-            _mockCache
-                .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>()))
-                .ReturnsAsync(new TimeSeriesSummary())
-                .Callback((string key, Func<Task<TimeSeriesSummary>> func) => getDataFunc = func);
+        _mockCache
+            .Setup(e => e.Get(It.IsAny<string>(), It.IsAny<Func<Task<TimeSeriesSummary>>>()))
+            .ReturnsAsync(new TimeSeriesSummary())
+            .Callback((string key, Func<Task<TimeSeriesSummary>> func) => getDataFunc = func);
 
-            // Act
-            await _target.Get(key);
-            var response = await getDataFunc.Invoke();
+        // Act
+        await _target.Get(key);
+        var response = await getDataFunc.Invoke();
 
-            // Assert
-            _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
-            _mockTimeSeriesRepository.Verify(e => e.Get(key), Times.Once);
-            response.Points.Should().BeEquivalentTo(timeSeriesResponse.Points);
-            response.Key.Should().Be(key);
-            response.GainLoss.Last3Days.Should().BeNull();
-            response.GainLoss.LastWeek.Should().BeNull();
-            response.GainLoss.Last2Weeks.Should().BeNull();
-            response.GainLoss.LastMonth.Should().BeNull();
-            response.GainLoss.Last3Months.Should().BeNull();
-            response.GainLoss.LastYear.Should().BeNull();
-            response.GainLoss.Last3Years.Should().BeNull();
-        }
+        // Assert
+        _mockCache.Verify(e => e.Get(key, It.IsAny<Func<Task<TimeSeriesSummary>>>()), Times.Once);
+        _mockTimeSeriesRepository.Verify(e => e.Get(key), Times.Once);
+        response.Points.Should().BeEquivalentTo(timeSeriesResponse.Points);
+        response.Key.Should().Be(key);
+        response.GainLoss.Last3Days.Should().BeNull();
+        response.GainLoss.LastWeek.Should().BeNull();
+        response.GainLoss.Last2Weeks.Should().BeNull();
+        response.GainLoss.LastMonth.Should().BeNull();
+        response.GainLoss.Last3Months.Should().BeNull();
+        response.GainLoss.LastYear.Should().BeNull();
+        response.GainLoss.Last3Years.Should().BeNull();
     }
 }

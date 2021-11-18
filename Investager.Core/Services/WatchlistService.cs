@@ -7,212 +7,211 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Services
+namespace Investager.Core.Services;
+
+public class WatchlistService : IWatchlistService
 {
-    public class WatchlistService : IWatchlistService
+    private readonly ICoreUnitOfWork _unitOfWork;
+    private readonly ITimeSeriesService _timeSeriesService;
+
+    public WatchlistService(
+        ICoreUnitOfWork coreUnitOfWork,
+        ITimeSeriesService timeSeriesService)
     {
-        private readonly ICoreUnitOfWork _unitOfWork;
-        private readonly ITimeSeriesService _timeSeriesService;
+        _unitOfWork = coreUnitOfWork;
+        _timeSeriesService = timeSeriesService;
+    }
 
-        public WatchlistService(
-            ICoreUnitOfWork coreUnitOfWork,
-            ITimeSeriesService timeSeriesService)
+    public async Task<IEnumerable<WatchlistLightResponse>> GetForUser(int userId)
+    {
+        var watchlists = await _unitOfWork.Watchlists.Find(e => e.UserId == userId);
+
+        return watchlists.Select(e => new WatchlistLightResponse
         {
-            _unitOfWork = coreUnitOfWork;
-            _timeSeriesService = timeSeriesService;
-        }
+            Id = e.Id,
+            Name = e.Name,
+            DisplayOrder = e.DisplayOrder,
+        }).ToList();
+    }
 
-        public async Task<IEnumerable<WatchlistLightResponse>> GetForUser(int userId)
+    public async Task<WatchlistResponse> GetById(int userId, int watchlistId)
+    {
+        var queryResponse = await _unitOfWork.Watchlists.Find(
+            e => e.UserId == userId && e.Id == watchlistId,
+            e => e
+                .Include(x => x.Assets)
+                    .ThenInclude(x => x.Asset)
+                .Include(x => x.CurrencyPairs)
+                    .ThenInclude(x => x.CurrencyPair)
+                        .ThenInclude(x => x.FirstCurrency)
+                .Include(x => x.CurrencyPairs)
+                    .ThenInclude(x => x.CurrencyPair)
+                        .ThenInclude(x => x.SecondCurrency));
+
+        var watchlist = queryResponse.Single();
+
+        var watchedAssets = new BlockingCollection<WatchedAssetResponse>();
+        var watchedCurrencyPairs = new BlockingCollection<WatchedCurrencyPairResponse>();
+
+        var watchedAssetTasks = watchlist.Assets.Select(async (e) =>
         {
-            var watchlists = await _unitOfWork.Watchlists.Find(e => e.UserId == userId);
-
-            return watchlists.Select(e => new WatchlistLightResponse
-            {
-                Id = e.Id,
-                Name = e.Name,
-                DisplayOrder = e.DisplayOrder,
-            }).ToList();
-        }
-
-        public async Task<WatchlistResponse> GetById(int userId, int watchlistId)
+            var watchedAssetResponse = await GetWatchedAssetResponse(e);
+            watchedAssets.Add(watchedAssetResponse);
+        });
+        var watchedCurrencyPairTasks = watchlist.CurrencyPairs.Select(async (e) =>
         {
-            var queryResponse = await _unitOfWork.Watchlists.Find(
-                e => e.UserId == userId && e.Id == watchlistId,
-                e => e
-                    .Include(x => x.Assets)
-                        .ThenInclude(x => x.Asset)
-                    .Include(x => x.CurrencyPairs)
-                        .ThenInclude(x => x.CurrencyPair)
-                            .ThenInclude(x => x.FirstCurrency)
-                    .Include(x => x.CurrencyPairs)
-                        .ThenInclude(x => x.CurrencyPair)
-                            .ThenInclude(x => x.SecondCurrency));
+            var watchedCurrencyPairResponse = await GetWatchedCurrencyPairResponse(e);
+            watchedCurrencyPairs.Add(watchedCurrencyPairResponse);
+        });
 
-            var watchlist = queryResponse.Single();
+        await Task.WhenAll(watchedAssetTasks);
+        await Task.WhenAll(watchedCurrencyPairTasks);
 
-            var watchedAssets = new BlockingCollection<WatchedAssetResponse>();
-            var watchedCurrencyPairs = new BlockingCollection<WatchedCurrencyPairResponse>();
-
-            var watchedAssetTasks = watchlist.Assets.Select(async (e) =>
-            {
-                var watchedAssetResponse = await GetWatchedAssetResponse(e);
-                watchedAssets.Add(watchedAssetResponse);
-            });
-            var watchedCurrencyPairTasks = watchlist.CurrencyPairs.Select(async (e) =>
-            {
-                var watchedCurrencyPairResponse = await GetWatchedCurrencyPairResponse(e);
-                watchedCurrencyPairs.Add(watchedCurrencyPairResponse);
-            });
-
-            await Task.WhenAll(watchedAssetTasks);
-            await Task.WhenAll(watchedCurrencyPairTasks);
-
-            return new WatchlistResponse
-            {
-                Id = watchlist.Id,
-                Assets = watchedAssets.ToList(),
-                CurrencyPairs = watchedCurrencyPairs.ToList(),
-            };
-        }
-
-        public async Task Add(AddWatchlistRequest addWatchlistRequest)
+        return new WatchlistResponse
         {
-            var watchlist = new Watchlist
-            {
-                Name = addWatchlistRequest.WatchlistName,
-                UserId = addWatchlistRequest.UserId,
-            };
+            Id = watchlist.Id,
+            Assets = watchedAssets.ToList(),
+            CurrencyPairs = watchedCurrencyPairs.ToList(),
+        };
+    }
 
-            _unitOfWork.Watchlists.Add(watchlist);
-
-            await _unitOfWork.SaveChanges();
-        }
-
-        public async Task WatchAsset(WatchAssetRequest watchAssetRequest)
+    public async Task Add(AddWatchlistRequest addWatchlistRequest)
+    {
+        var watchlist = new Watchlist
         {
-            await VerifyWatchlistOwnership(watchAssetRequest.UserId, watchAssetRequest.WatchlistId);
+            Name = addWatchlistRequest.WatchlistName,
+            UserId = addWatchlistRequest.UserId,
+        };
 
-            var watchlistAsset = new WatchlistAsset
-            {
-                WatchlistId = watchAssetRequest.WatchlistId,
-                AssetId = watchAssetRequest.AssetId,
-                DisplayOrder = watchAssetRequest.DisplayOrder,
-            };
+        _unitOfWork.Watchlists.Add(watchlist);
 
-            _unitOfWork.WatchlistAssets.Add(watchlistAsset);
-            await _unitOfWork.SaveChanges();
-        }
+        await _unitOfWork.SaveChanges();
+    }
 
-        public async Task WatchCurrencyPair(WatchCurrencyPairRequest watchCurrencyPairRequest)
+    public async Task WatchAsset(WatchAssetRequest watchAssetRequest)
+    {
+        await VerifyWatchlistOwnership(watchAssetRequest.UserId, watchAssetRequest.WatchlistId);
+
+        var watchlistAsset = new WatchlistAsset
         {
-            await VerifyWatchlistOwnership(watchCurrencyPairRequest.UserId, watchCurrencyPairRequest.WatchlistId);
+            WatchlistId = watchAssetRequest.WatchlistId,
+            AssetId = watchAssetRequest.AssetId,
+            DisplayOrder = watchAssetRequest.DisplayOrder,
+        };
 
-            var watchlistCurrencyPair = new WatchlistCurrencyPair
-            {
-                WatchlistId = watchCurrencyPairRequest.WatchlistId,
-                CurrencyPairId = watchCurrencyPairRequest.CurrencyPairId,
-                DisplayOrder = watchCurrencyPairRequest.DisplayOrder,
-            };
+        _unitOfWork.WatchlistAssets.Add(watchlistAsset);
+        await _unitOfWork.SaveChanges();
+    }
 
-            _unitOfWork.WatchlistCurrencyPairs.Add(watchlistCurrencyPair);
-            await _unitOfWork.SaveChanges();
-        }
+    public async Task WatchCurrencyPair(WatchCurrencyPairRequest watchCurrencyPairRequest)
+    {
+        await VerifyWatchlistOwnership(watchCurrencyPairRequest.UserId, watchCurrencyPairRequest.WatchlistId);
 
-        public async Task UpdateDisplayOrder(int userId, int watchlistId, int displayOrder)
+        var watchlistCurrencyPair = new WatchlistCurrencyPair
         {
-            var watchlistQuery = await _unitOfWork.Watchlists
-                .FindWithTracking(e => e.Id == watchlistId && e.UserId == userId);
+            WatchlistId = watchCurrencyPairRequest.WatchlistId,
+            CurrencyPairId = watchCurrencyPairRequest.CurrencyPairId,
+            DisplayOrder = watchCurrencyPairRequest.DisplayOrder,
+        };
 
-            var watchlist = watchlistQuery.Single();
-            watchlist.DisplayOrder = displayOrder;
+        _unitOfWork.WatchlistCurrencyPairs.Add(watchlistCurrencyPair);
+        await _unitOfWork.SaveChanges();
+    }
 
-            await _unitOfWork.SaveChanges();
-        }
+    public async Task UpdateDisplayOrder(int userId, int watchlistId, int displayOrder)
+    {
+        var watchlistQuery = await _unitOfWork.Watchlists
+            .FindWithTracking(e => e.Id == watchlistId && e.UserId == userId);
 
-        public async Task UpdateName(int userId, int watchlistId, string name)
+        var watchlist = watchlistQuery.Single();
+        watchlist.DisplayOrder = displayOrder;
+
+        await _unitOfWork.SaveChanges();
+    }
+
+    public async Task UpdateName(int userId, int watchlistId, string name)
+    {
+        var watchlistQuery = await _unitOfWork.Watchlists
+            .FindWithTracking(e => e.Id == watchlistId && e.UserId == userId);
+
+        var watchlist = watchlistQuery.Single();
+        watchlist.Name = name;
+
+        await _unitOfWork.SaveChanges();
+    }
+
+    public async Task UnwatchAsset(int userId, int watchlistId, int assetId)
+    {
+        await VerifyWatchlistOwnership(userId, watchlistId);
+
+        _unitOfWork.WatchlistAssets
+            .Delete(e => e.WatchlistId == watchlistId && e.AssetId == assetId);
+
+        await _unitOfWork.SaveChanges();
+    }
+
+    public async Task UnwatchCurrencyPair(int userId, int watchlistId, int currencyPairId)
+    {
+        await VerifyWatchlistOwnership(userId, watchlistId);
+
+        _unitOfWork.WatchlistCurrencyPairs
+            .Delete(e => e.WatchlistId == watchlistId && e.CurrencyPairId == currencyPairId);
+
+        await _unitOfWork.SaveChanges();
+    }
+
+    public async Task Delete(int userId, int watchlistId)
+    {
+        _unitOfWork.Watchlists
+            .Delete(e => e.Id == watchlistId && e.UserId == userId);
+
+        await _unitOfWork.SaveChanges();
+    }
+
+    private async Task<WatchedAssetResponse> GetWatchedAssetResponse(WatchlistAsset watchlistAsset)
+    {
+        var key = $"{watchlistAsset.Asset.Exchange}:{watchlistAsset.Asset.Symbol}";
+
+        var timeSeriesSummary = await _timeSeriesService.Get(key);
+
+        var response = new WatchedAssetResponse
         {
-            var watchlistQuery = await _unitOfWork.Watchlists
-                .FindWithTracking(e => e.Id == watchlistId && e.UserId == userId);
+            AssetId = watchlistAsset.AssetId,
+            Symbol = watchlistAsset.Asset.Symbol,
+            Exchange = watchlistAsset.Asset.Exchange,
+            Key = key,
+            Name = watchlistAsset.Asset.Name,
+            Industry = watchlistAsset.Asset.Industry,
+            Currency = watchlistAsset.Asset.Currency,
+            DisplayOrder = watchlistAsset.DisplayOrder,
+            GainLoss = timeSeriesSummary.GainLoss,
+        };
 
-            var watchlist = watchlistQuery.Single();
-            watchlist.Name = name;
+        return response;
+    }
 
-            await _unitOfWork.SaveChanges();
-        }
+    private async Task<WatchedCurrencyPairResponse> GetWatchedCurrencyPairResponse(WatchlistCurrencyPair watchlistCurrencyPair)
+    {
+        var timeSeriesSummary = await _timeSeriesService.Get(watchlistCurrencyPair.CurrencyPair);
 
-        public async Task UnwatchAsset(int userId, int watchlistId, int assetId)
+        var response = new WatchedCurrencyPairResponse
         {
-            await VerifyWatchlistOwnership(userId, watchlistId);
+            FirstCurrencyName = watchlistCurrencyPair.CurrencyPair.FirstCurrency.Name,
+            SecondCurrencyName = watchlistCurrencyPair.CurrencyPair.SecondCurrency.Name,
+            Key = timeSeriesSummary.Key,
+            DisplayOrder = watchlistCurrencyPair.DisplayOrder,
+            GainLoss = timeSeriesSummary.GainLoss,
+        };
 
-            _unitOfWork.WatchlistAssets
-                .Delete(e => e.WatchlistId == watchlistId && e.AssetId == assetId);
+        return response;
+    }
 
-            await _unitOfWork.SaveChanges();
-        }
+    private async Task VerifyWatchlistOwnership(int userId, int watchlistId)
+    {
+        var watchlistQuery = await _unitOfWork
+            .Watchlists
+            .Find(e => e.Id == watchlistId && e.UserId == userId);
 
-        public async Task UnwatchCurrencyPair(int userId, int watchlistId, int currencyPairId)
-        {
-            await VerifyWatchlistOwnership(userId, watchlistId);
-
-            _unitOfWork.WatchlistCurrencyPairs
-                .Delete(e => e.WatchlistId == watchlistId && e.CurrencyPairId == currencyPairId);
-
-            await _unitOfWork.SaveChanges();
-        }
-
-        public async Task Delete(int userId, int watchlistId)
-        {
-            _unitOfWork.Watchlists
-                .Delete(e => e.Id == watchlistId && e.UserId == userId);
-
-            await _unitOfWork.SaveChanges();
-        }
-
-        private async Task<WatchedAssetResponse> GetWatchedAssetResponse(WatchlistAsset watchlistAsset)
-        {
-            var key = $"{watchlistAsset.Asset.Exchange}:{watchlistAsset.Asset.Symbol}";
-
-            var timeSeriesSummary = await _timeSeriesService.Get(key);
-
-            var response = new WatchedAssetResponse
-            {
-                AssetId = watchlistAsset.AssetId,
-                Symbol = watchlistAsset.Asset.Symbol,
-                Exchange = watchlistAsset.Asset.Exchange,
-                Key = key,
-                Name = watchlistAsset.Asset.Name,
-                Industry = watchlistAsset.Asset.Industry,
-                Currency = watchlistAsset.Asset.Currency,
-                DisplayOrder = watchlistAsset.DisplayOrder,
-                GainLoss = timeSeriesSummary.GainLoss,
-            };
-
-            return response;
-        }
-
-        private async Task<WatchedCurrencyPairResponse> GetWatchedCurrencyPairResponse(WatchlistCurrencyPair watchlistCurrencyPair)
-        {
-            var timeSeriesSummary = await _timeSeriesService.Get(watchlistCurrencyPair.CurrencyPair);
-
-            var response = new WatchedCurrencyPairResponse
-            {
-                FirstCurrencyName = watchlistCurrencyPair.CurrencyPair.FirstCurrency.Name,
-                SecondCurrencyName = watchlistCurrencyPair.CurrencyPair.SecondCurrency.Name,
-                Key = timeSeriesSummary.Key,
-                DisplayOrder = watchlistCurrencyPair.DisplayOrder,
-                GainLoss = timeSeriesSummary.GainLoss,
-            };
-
-            return response;
-        }
-
-        private async Task VerifyWatchlistOwnership(int userId, int watchlistId)
-        {
-            var watchlistQuery = await _unitOfWork
-                .Watchlists
-                .Find(e => e.Id == watchlistId && e.UserId == userId);
-
-            var verifyOwnership = watchlistQuery.Single();
-        }
+        var verifyOwnership = watchlistQuery.Single();
     }
 }

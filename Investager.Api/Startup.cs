@@ -11,80 +11,79 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using System.Text.Json.Serialization;
 
-namespace Investager.Api
+namespace Investager.Api;
+
+public class Startup
 {
-    public class Startup
+    public Startup(IConfiguration configuration)
     {
-        public Startup(IConfiguration configuration)
+        Configuration = configuration;
+    }
+
+    public IConfiguration Configuration { get; }
+
+    public void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDbContext<InvestagerCoreContext>(options =>
+            options.UseNpgsql(Configuration.GetConnectionString("InvestagerCore")));
+
+        services.AddDbContext<InvestagerTimeSeriesContext>(options =>
+            options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")),
+            optionsLifetime: ServiceLifetime.Singleton);
+        services.AddDbContextFactory<InvestagerTimeSeriesContext>(options =>
+            options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
+
+        services.AddAutoMapper(e => e.AddProfile<AutoMapperProfile>());
+
+        services.AddHttpContextAccessor();
+        services.AddCors();
+        services.AddControllers();
+        services.AddInvestagerServices(Configuration);
+
+        services.AddAuthorization(e =>
         {
-            Configuration = configuration;
-        }
+            e.AddPolicy(PolicyNames.User, p => p.Requirements.Add(new AuthenticatedUserRequirement()));
+        });
 
-        public IConfiguration Configuration { get; }
+        services.AddHttpClients(Configuration);
 
-        public void ConfigureServices(IServiceCollection services)
+        services.AddMvc()
+            .AddJsonOptions(e =>
+            {
+                e.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+    }
+
+    public void Configure(IApplicationBuilder app)
+    {
+        app.UseSerilogRequestLogging();
+
+        using var scope = app.ApplicationServices.CreateScope();
+        var coreContext = scope.ServiceProvider.GetService<InvestagerCoreContext>();
+        coreContext?.Database.Migrate();
+        var timeSeriesContext = scope.ServiceProvider.GetService<InvestagerTimeSeriesContext>();
+        timeSeriesContext?.Database.Migrate();
+
+        app.UseForwardedHeaders(new ForwardedHeadersOptions
         {
-            services.AddDbContext<InvestagerCoreContext>(options =>
-                options.UseNpgsql(Configuration.GetConnectionString("InvestagerCore")));
+            ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+        });
 
-            services.AddDbContext<InvestagerTimeSeriesContext>(options =>
-                options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")),
-                optionsLifetime: ServiceLifetime.Singleton);
-            services.AddDbContextFactory<InvestagerTimeSeriesContext>(options =>
-                options.UseNpgsql(Configuration.GetConnectionString("InvestagerTimeSeries")));
+        app.UseRouting();
 
-            services.AddAutoMapper(e => e.AddProfile<AutoMapperProfile>());
+        app.UseCors(e => e
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowAnyOrigin());
 
-            services.AddHttpContextAccessor();
-            services.AddCors();
-            services.AddControllers();
-            services.AddInvestagerServices(Configuration);
+        app.UseMiddleware<ErrorHandlerMiddleware>();
 
-            services.AddAuthorization(e =>
-            {
-                e.AddPolicy(PolicyNames.User, p => p.Requirements.Add(new AuthenticatedUserRequirement()));
-            });
+        app.UseAuthorization();
 
-            services.AddHttpClients(Configuration);
-
-            services.AddMvc()
-                .AddJsonOptions(e =>
-                {
-                    e.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                });
-        }
-
-        public void Configure(IApplicationBuilder app)
+        app.UseEndpoints(endpoints =>
         {
-            app.UseSerilogRequestLogging();
-
-            using var scope = app.ApplicationServices.CreateScope();
-            var coreContext = scope.ServiceProvider.GetService<InvestagerCoreContext>();
-            coreContext?.Database.Migrate();
-            var timeSeriesContext = scope.ServiceProvider.GetService<InvestagerTimeSeriesContext>();
-            timeSeriesContext?.Database.Migrate();
-
-            app.UseForwardedHeaders(new ForwardedHeadersOptions
-            {
-                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-            });
-
-            app.UseRouting();
-
-            app.UseCors(e => e
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowAnyOrigin());
-
-            app.UseMiddleware<ErrorHandlerMiddleware>();
-
-            app.UseAuthorization();
-
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapGet("/api/v1/serviceinfo", async context => await context.Response.WriteAsync("Hello from Investager API."));
-                endpoints.MapControllers().RequireAuthorization(PolicyNames.User);
-            });
-        }
+            endpoints.MapGet("/api/v1/serviceinfo", async context => await context.Response.WriteAsync("Hello from Investager API."));
+            endpoints.MapControllers().RequireAuthorization(PolicyNames.User);
+        });
     }
 }
