@@ -212,13 +212,13 @@ namespace Investager.Infrastructure.UnitTests.Persistence
         }
 
         [Fact]
-        public void GetByIdWithTracking_WhenEntityNotFound_Throws()
+        public async Task GetByIdWithTracking_WhenEntityNotFound_Throws()
         {
             // Act
             Func<Task> act = async () => await _target.GetByIdWithTracking(2);
 
             // Assert
-            act.Should().Throw<Exception>()
+            await act.Should().ThrowAsync<Exception>()
                 .WithMessage("Entity not found.");
         }
 
@@ -662,7 +662,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             Func<Task> act = async () => await _context.SaveChangesAsync();
 
             // Assert
-            act.Should().Throw<DbUpdateException>();
+            await act.Should().ThrowAsync<DbUpdateException>();
         }
 
         [Fact]
@@ -761,7 +761,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             Func<Task> act = async () => await _context.SaveChangesAsync();
 
             // Assert
-            act.Should().Throw<DbUpdateException>();
+            act.Should().ThrowAsync<DbUpdateException>();
         }
 
         [Fact]
@@ -824,7 +824,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             Func<Task> act = async () => await _context.SaveChangesAsync();
 
             // Assert
-            act.Should().Throw<DbUpdateException>();
+            act.Should().ThrowAsync<DbUpdateException>();
         }
 
         [Fact]
@@ -946,7 +946,7 @@ namespace Investager.Infrastructure.UnitTests.Persistence
             Func<Task> act = async () => await _context.SaveChangesAsync();
 
             // Assert
-            act.Should().Throw<DbUpdateException>();
+            act.Should().ThrowAsync<DbUpdateException>();
         }
 
         private async Task AddUsers(IList<User> users)
