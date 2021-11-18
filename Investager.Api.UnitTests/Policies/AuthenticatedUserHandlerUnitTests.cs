@@ -35,18 +35,18 @@ namespace Investager.Api.UnitTests.Policies
         }
 
         [Fact]
-        public void HandleAsync_WhenNoAuthorizationHeader_Throws()
+        public async Task HandleAsync_WhenNoAuthorizationHeader_Throws()
         {
             // Act
             Func<Task> act = async () => await _target.HandleAsync(_context);
 
             // Assert
-            act.Should().Throw<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
+            await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
             _context.HasSucceeded.Should().BeFalse();
         }
 
         [Fact]
-        public void HandleAsync_WhenAuthorizationHeaderInvalid_Throws()
+        public async Task HandleAsync_WhenAuthorizationHeaderInvalid_Throws()
         {
             // Arrange
             _httpContext.Request.Headers.Add("Authorization", "1337");
@@ -55,12 +55,12 @@ namespace Investager.Api.UnitTests.Policies
             Func<Task> act = async () => await _target.HandleAsync(_context);
 
             // Assert
-            act.Should().Throw<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
+            await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
             _context.HasSucceeded.Should().BeFalse();
         }
 
         [Fact]
-        public void HandleAsync_WhenTokenInvalid_Throws()
+        public async Task HandleAsync_WhenTokenInvalid_Throws()
         {
             // Arrange
             var errorMessage = "Token not valid.";
@@ -71,7 +71,7 @@ namespace Investager.Api.UnitTests.Policies
             Func<Task> act = async () => await _target.HandleAsync(_context);
 
             // Assert
-            act.Should().Throw<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
+            await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
             _context.HasSucceeded.Should().BeFalse();
         }
 
@@ -79,7 +79,10 @@ namespace Investager.Api.UnitTests.Policies
         public async Task HandleAsync_WhenTokenValid_PopulatesItemsDictionary()
         {
             // Arrange
-            var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNSIsImp0aSI6IjZhZDZlODBjLWMxMmItNGQ1NS05MTNjLTkwZjgzMjMxZDQyYSIsImV4cCI6MTYyMTcxNjQ5MiwiaXNzIjoiaW52ZXN0YWdlciJ9.TYO6Ea4it_jnKB3RioSyVdxt4MfcPE4faiV9e6qHbx4";
+            var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNSIsImp0aSI6I" +
+                "jZhZDZlODBjLWMxMmItNGQ1NS05MTNjLTkwZjgzMjMxZDQyYSIsImV4cCI6MTYyMTcxNjQ" +
+                "5MiwiaXNzIjoiaW52ZXN0YWdlciJ9.TYO6Ea4it_jnKB3RioSyVdxt4MfcPE4faiV9e6qHbx4";
+
             _httpContext.Request.Headers.Add("Authorization", $"Bearer {token}");
             _mockJwtTokenService.Setup(e => e.Validate(It.IsAny<string>())).Returns(DecodeToken(token));
 

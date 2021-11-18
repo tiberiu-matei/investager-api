@@ -95,7 +95,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         }
 
         [Fact]
-        public void GetAssets_WhenAlpacaCallFails_Throws()
+        public async Task GetAssets_WhenAlpacaCallFails_Throws()
         {
             // Arrange
             var response = new HttpResponseMessage
@@ -116,11 +116,11 @@ namespace Investager.Infrastructure.UnitTests.Services
             Func<Task> act = async () => await _target.GetAssets();
 
             // Assert
-            act.Should().Throw<HttpRequestException>();
+            await act.Should().ThrowAsync<HttpRequestException>();
         }
 
         [Fact]
-        public void GetRecentPoints_WhenAlpacaCallFails_Throws()
+        public async Task GetRecentPoints_WhenAlpacaCallFails_Throws()
         {
             // Arrange
             var response = new HttpResponseMessage
@@ -148,7 +148,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             Func<Task> act = async () => await _target.GetRecentPoints(request);
 
             // Assert
-            act.Should().Throw<HttpRequestException>();
+            await act.Should().ThrowAsync<HttpRequestException>();
         }
 
         [Fact]

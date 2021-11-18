@@ -27,13 +27,13 @@ namespace Investager.Api.UnitTests.Controllers
         }
 
         [Fact]
-        public void Get_WhenUserIdNotPresent_Throws()
+        public async Task Get_WhenUserIdNotPresent_Throws()
         {
             // Act
             Func<Task> act = async () => await _target.Get();
 
             // Assert
-            act.Should().Throw<Exception>();
+            await act.Should().ThrowAsync<Exception>();
             _mockUserService.Verify(e => e.Get(It.IsAny<int>()), Times.Never);
         }
 
@@ -138,13 +138,13 @@ namespace Investager.Api.UnitTests.Controllers
         }
 
         [Fact]
-        public void Update_WhenUserIdNotPresent_Throws()
+        public async Task Update_WhenUserIdNotPresent_Throws()
         {
             // Act
             Func<Task> act = async () => await _target.Update(new UpdateUserDto());
 
             // Assert
-            act.Should().Throw<Exception>();
+            await act.Should().ThrowAsync<Exception>();
             _mockUserService.Verify(e => e.Update(It.IsAny<int>(), It.IsAny<UpdateUserDto>()), Times.Never);
         }
 
@@ -170,13 +170,13 @@ namespace Investager.Api.UnitTests.Controllers
         }
 
         [Fact]
-        public void UpdateTheme_WhenUserIdNotPresent_Throws()
+        public async Task UpdateTheme_WhenUserIdNotPresent_Throws()
         {
             // Act
             Func<Task> act = async () => await _target.UpdateTheme(new UpdateThemeRequest { Theme = Theme.Light });
 
             // Assert
-            act.Should().Throw<Exception>();
+            await act.Should().ThrowAsync<Exception>();
             _mockUserService.Verify(e => e.UpdateTheme(It.IsAny<int>(), It.IsAny<Theme>()), Times.Never);
         }
 
@@ -197,13 +197,13 @@ namespace Investager.Api.UnitTests.Controllers
         }
 
         [Fact]
-        public void Delete_WhenUserIdNotPresent_Throws()
+        public async Task Delete_WhenUserIdNotPresent_Throws()
         {
             // Act
             Func<Task> act = async () => await _target.Delete();
 
             // Assert
-            act.Should().Throw<Exception>();
+            await act.Should().ThrowAsync<Exception>();
             _mockUserService.Verify(e => e.Delete(It.IsAny<int>()), Times.Never);
         }
 

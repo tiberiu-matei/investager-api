@@ -152,7 +152,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         }
 
         [Fact]
-        public void GetPairs_WhenCoinGeckoCallFails_Throws()
+        public async Task GetPairs_WhenCoinGeckoCallFails_Throws()
         {
             // Arrange
             var response = new HttpResponseMessage
@@ -173,7 +173,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             Func<Task> act = async () => await _target.GetPairs();
 
             // Assert
-            act.Should().Throw<HttpRequestException>();
+            await act.Should().ThrowAsync<HttpRequestException>();
         }
 
         [Fact]
@@ -304,7 +304,7 @@ namespace Investager.Infrastructure.UnitTests.Services
         }
 
         [Fact]
-        public void GetRecentPoints_WhenCoinGeckoCallFails_Throws()
+        public async Task GetRecentPoints_WhenCoinGeckoCallFails_Throws()
         {
             // Arrange
             var response = new HttpResponseMessage
@@ -332,7 +332,7 @@ namespace Investager.Infrastructure.UnitTests.Services
             Func<Task> act = async () => await _target.GetRecentPoints(request);
 
             // Assert
-            act.Should().Throw<HttpRequestException>();
+            await act.Should().ThrowAsync<HttpRequestException>();
         }
 
         private async Task SetupCardanoChartCall()

@@ -41,7 +41,7 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void Get_WhenUserNotFound_Throws()
+        public async Task Get_WhenUserNotFound_Throws()
         {
             // Arrange
             _mockUserRepository
@@ -52,7 +52,7 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.Get(1);
 
             // Assert
-            act.Should().Throw<InvalidOperationException>()
+            await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage("Sequence contains no elements");
         }
 
@@ -201,7 +201,7 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void RegisterUser_WhenSaveChangesFails_Throws()
+        public async Task RegisterUser_WhenSaveChangesFails_Throws()
         {
             // Arrange
             var errorMessage = "Unable to save.";
@@ -212,7 +212,7 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.Register(registerUser);
 
             // Assert
-            act.Should().Throw<Exception>()
+            await act.Should().ThrowAsync<Exception>()
                 .WithMessage(errorMessage);
         }
 
@@ -257,7 +257,7 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void Login_WhenSaveChangesFails_Throws()
+        public async Task Login_WhenSaveChangesFails_Throws()
         {
             // Arrange
             var errorMessage = "Unable to save.";
@@ -295,12 +295,12 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.Login(user.Email, password);
 
             // Assert
-            act.Should().Throw<Exception>()
+            await act.Should().ThrowAsync<Exception>()
                 .WithMessage(errorMessage);
         }
 
         [Fact]
-        public void Login_WhenPasswordIncorrect_Throws()
+        public async Task Login_WhenPasswordIncorrect_Throws()
         {
             // Arrange
             var user = new User
@@ -324,7 +324,7 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.Login(user.Email, password);
 
             // Assert
-            act.Should().Throw<InvalidPasswordException>()
+            await act.Should().ThrowAsync<InvalidPasswordException>()
                 .WithMessage("Password invalid.");
         }
 
@@ -364,7 +364,7 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void RefreshToken_WhenTokenNotFound_Throws()
+        public async Task RefreshToken_WhenTokenNotFound_Throws()
         {
             // Arrange
             var refreshToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3IiwianRpIjoiZjkxZmU3MDQ" +
@@ -384,12 +384,12 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.RefreshToken(refreshToken);
 
             // Assert
-            act.Should().Throw<InvalidOperationException>()
+            await act.Should().ThrowAsync<InvalidOperationException>()
                 .WithMessage("Sequence contains no elements");
         }
 
         [Fact]
-        public void Update_WhenSaveChangesFails_Throws()
+        public async Task Update_WhenSaveChangesFails_Throws()
         {
             // Arrange
             var errorMessage = "Unable to save.";
@@ -410,7 +410,7 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.Update(1, new UpdateUserDto());
 
             // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
+            await act.Should().ThrowAsync<Exception>().WithMessage(errorMessage);
         }
 
         [Fact]
@@ -440,7 +440,7 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void UpdateTheme_WhenUserNotFound_Throws()
+        public async Task UpdateTheme_WhenUserNotFound_Throws()
         {
             // Arrange
             var errorMessage = "User not found.";
@@ -452,7 +452,7 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.UpdateTheme(1, Theme.Dark);
 
             // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
+            await act.Should().ThrowAsync<Exception>().WithMessage(errorMessage);
         }
 
         [Fact]
@@ -478,7 +478,7 @@ namespace Investager.Core.UnitTests.Services
         }
 
         [Fact]
-        public void Delete_WhenSaveChangesFails_Throws()
+        public async Task Delete_WhenSaveChangesFails_Throws()
         {
             // Arrange
             var errorMessage = "Unable to save.";
@@ -490,7 +490,7 @@ namespace Investager.Core.UnitTests.Services
             Func<Task> act = async () => await _target.Delete(1);
 
             // Assert
-            act.Should().Throw<Exception>().WithMessage(errorMessage);
+            await act.Should().ThrowAsync<Exception>().WithMessage(errorMessage);
         }
 
         [Fact]
