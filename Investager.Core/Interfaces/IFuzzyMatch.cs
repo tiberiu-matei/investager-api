@@ -1,7 +1,6 @@
-﻿namespace Investager.Core.Interfaces
+﻿namespace Investager.Core.Interfaces;
+
+public interface IFuzzyMatch
 {
-    public interface IFuzzyMatch
-    {
-        int Compute(string input, string comparedTo);
-    }
+    int Compute(string input, string comparedTo);
 }

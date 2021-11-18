@@ -1,9 +1,8 @@
-﻿namespace Investager.Core.Models
-{
-    public static class Environments
-    {
-        public const string Development = "Dev";
+﻿namespace Investager.Core.Models;
 
-        public const string Production = "Prod";
-    }
+public static class Environments
+{
+    public const string Development = "Dev";
+
+    public const string Production = "Prod";
 }

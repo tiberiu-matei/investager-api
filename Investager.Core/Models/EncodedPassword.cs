@@ -1,9 +1,8 @@
-﻿namespace Investager.Core.Models
-{
-    public class EncodedPassword
-    {
-        public byte[] Hash { get; set; }
+﻿namespace Investager.Core.Models;
 
-        public byte[] Salt { get; set; }
-    }
+public class EncodedPassword
+{
+    public byte[] Hash { get; set; }
+
+    public byte[] Salt { get; set; }
 }

@@ -1,7 +1,6 @@
-﻿namespace Investager.Core.Constants
+﻿namespace Investager.Core.Constants;
+
+public static class HttpContextKeys
 {
-    public static class HttpContextKeys
-    {
-        public const string UserId = "UserId";
-    }
+    public const string UserId = "UserId";
 }

@@ -8,45 +8,44 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Investager.Api.UnitTests.Controllers
+namespace Investager.Api.UnitTests.Controllers;
+
+public class TimeSeriesControllerUnitTests
 {
-    public class TimeSeriesControllerUnitTests
+    private readonly Mock<ITimeSeriesService> _mockTimeSeriesService = new Mock<ITimeSeriesService>();
+
+    private readonly TimeSeriesController _target;
+
+    public TimeSeriesControllerUnitTests()
     {
-        private readonly Mock<ITimeSeriesService> _mockTimeSeriesService = new Mock<ITimeSeriesService>();
+        _target = new TimeSeriesController(_mockTimeSeriesService.Object);
+    }
 
-        private readonly TimeSeriesController _target;
-
-        public TimeSeriesControllerUnitTests()
+    [Fact]
+    public async Task Get_ReturnsDataFromService()
+    {
+        // Arrange
+        var key = "NASDAQ:ZM";
+        var timeSeries = new TimeSeriesSummary
         {
-            _target = new TimeSeriesController(_mockTimeSeriesService.Object);
-        }
-
-        [Fact]
-        public async Task Get_ReturnsDataFromService()
-        {
-            // Arrange
-            var key = "NASDAQ:ZM";
-            var timeSeries = new TimeSeriesSummary
-            {
-                Key = key,
-                Points = new List<TimePointResponse>
+            Key = key,
+            Points = new List<TimePointResponse>
                 {
                     new TimePointResponse { Time = new DateTime(2021, 02, 02), Value = 103.5f },
                 },
-                GainLoss = new GainLossResponse
-                {
-                    Last2Weeks = 35.3f,
-                    LastYear = -88.91f,
-                },
-            };
+            GainLoss = new GainLossResponse
+            {
+                Last2Weeks = 35.3f,
+                LastYear = -88.91f,
+            },
+        };
 
-            _mockTimeSeriesService.Setup(e => e.Get(key)).ReturnsAsync(timeSeries);
+        _mockTimeSeriesService.Setup(e => e.Get(key)).ReturnsAsync(timeSeries);
 
-            // Act
-            var response = await _target.Get(key);
+        // Act
+        var response = await _target.Get(key);
 
-            // Assert
-            response.Value.Should().BeEquivalentTo(timeSeries.Points);
-        }
+        // Assert
+        response.Value.Should().BeEquivalentTo(timeSeries.Points);
     }
 }

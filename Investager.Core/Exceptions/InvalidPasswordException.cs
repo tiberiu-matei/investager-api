@@ -1,21 +1,20 @@
 ﻿using System;
 
-namespace Investager.Core.Exceptions
+namespace Investager.Core.Exceptions;
+
+public class InvalidPasswordException : InvestagerException
 {
-    public class InvalidPasswordException : InvestagerException
+    public InvalidPasswordException()
     {
-        public InvalidPasswordException()
-        {
-        }
+    }
 
-        public InvalidPasswordException(string message)
-            : base(message)
-        {
-        }
+    public InvalidPasswordException(string message)
+        : base(message)
+    {
+    }
 
-        public InvalidPasswordException(string message, Exception inner)
-            : base(message, inner)
-        {
-        }
+    public InvalidPasswordException(string message, Exception inner)
+        : base(message, inner)
+    {
     }
 }

@@ -1,7 +1,6 @@
-﻿namespace Investager.Core.Dtos
+﻿namespace Investager.Core.Dtos;
+
+public class UpdateWatchlistNameBody
 {
-    public class UpdateWatchlistNameBody
-    {
-        public string Name { get; set; }
-    }
+    public string Name { get; set; }
 }

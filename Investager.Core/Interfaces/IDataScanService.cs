@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Interfaces
+namespace Investager.Core.Interfaces;
+
+public interface IDataScanService
 {
-    public interface IDataScanService
-    {
-        public Task<IEnumerable<Asset>> GetAssets();
-    }
+    public Task<IEnumerable<Asset>> GetAssets();
 }

@@ -1,9 +1,8 @@
-﻿namespace Investager.Core.Dtos
-{
-    public class StarAssetRequest
-    {
-        public int AssetId { get; set; }
+﻿namespace Investager.Core.Dtos;
 
-        public int DisplayOrder { get; set; }
-    }
+public class StarAssetRequest
+{
+    public int AssetId { get; set; }
+
+    public int DisplayOrder { get; set; }
 }

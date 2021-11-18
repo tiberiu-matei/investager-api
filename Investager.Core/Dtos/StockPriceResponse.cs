@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace Investager.Core.Dtos
-{
-    public class StockPriceResponse
-    {
-        public DateTime Time { get; set; }
+namespace Investager.Core.Dtos;
 
-        public float Price { get; set; }
-    }
+public class StockPriceResponse
+{
+    public DateTime Time { get; set; }
+
+    public float Price { get; set; }
 }

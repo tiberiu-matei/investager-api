@@ -1,25 +1,24 @@
 ﻿using System.Collections.Generic;
 
-namespace Investager.Core.Models
+namespace Investager.Core.Models;
+
+public class User
 {
-    public class User
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        public string Email { get; set; }
+    public string Email { get; set; }
 
-        public string DisplayEmail { get; set; }
+    public string DisplayEmail { get; set; }
 
-        public string DisplayName { get; set; }
+    public string DisplayName { get; set; }
 
-        public Theme Theme { get; set; }
+    public Theme Theme { get; set; }
 
-        public byte[] PasswordHash { get; set; }
+    public byte[] PasswordHash { get; set; }
 
-        public byte[] PasswordSalt { get; set; }
+    public byte[] PasswordSalt { get; set; }
 
-        public ICollection<RefreshToken> RefreshTokens { get; set; }
+    public ICollection<RefreshToken> RefreshTokens { get; set; }
 
-        public ICollection<Watchlist> Watchlists { get; set; }
-    }
+    public ICollection<Watchlist> Watchlists { get; set; }
 }

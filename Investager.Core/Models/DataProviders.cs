@@ -1,9 +1,8 @@
-﻿namespace Investager.Core.Models
-{
-    public static class DataProviders
-    {
-        public const string Alpaca = "Alpaca";
+﻿namespace Investager.Core.Models;
 
-        public const string CoinGecko = "CoinGecko";
-    }
+public static class DataProviders
+{
+    public const string Alpaca = "Alpaca";
+
+    public const string CoinGecko = "CoinGecko";
 }

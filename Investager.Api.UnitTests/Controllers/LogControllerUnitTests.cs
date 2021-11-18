@@ -6,43 +6,42 @@ using Moq;
 using System;
 using Xunit;
 
-namespace Investager.Api.UnitTests.Controllers
+namespace Investager.Api.UnitTests.Controllers;
+
+public class LogControllerUnitTests
 {
-    public class LogControllerUnitTests
+    private readonly Mock<ILogger<LogController>> _mockLogger = new Mock<ILogger<LogController>>();
+
+    private readonly LogController _target;
+
+    public LogControllerUnitTests()
     {
-        private readonly Mock<ILogger<LogController>> _mockLogger = new Mock<ILogger<LogController>>();
+        _target = new LogController(_mockLogger.Object);
+    }
 
-        private readonly LogController _target;
-
-        public LogControllerUnitTests()
+    [Theory]
+    [InlineData(UILogLevel.Information, LogLevel.Information)]
+    [InlineData(UILogLevel.Debug, LogLevel.Debug)]
+    [InlineData(UILogLevel.Warning, LogLevel.Warning)]
+    [InlineData(UILogLevel.Error, LogLevel.Error)]
+    public void Log_SecondsCorrectMessage(UILogLevel input, LogLevel expected)
+    {
+        // Arrange
+        var request = new LogRequest
         {
-            _target = new LogController(_mockLogger.Object);
-        }
+            Level = input,
+            Message = "ti don",
+        };
 
-        [Theory]
-        [InlineData(UILogLevel.Information, LogLevel.Information)]
-        [InlineData(UILogLevel.Debug, LogLevel.Debug)]
-        [InlineData(UILogLevel.Warning, LogLevel.Warning)]
-        [InlineData(UILogLevel.Error, LogLevel.Error)]
-        public void Log_SecondsCorrectMessage(UILogLevel input, LogLevel expected)
-        {
-            // Arrange
-            var request = new LogRequest
-            {
-                Level = input,
-                Message = "ti don",
-            };
+        // Act
+        _target.Log(request);
 
-            // Act
-            _target.Log(request);
-
-            // Assert
-            _mockLogger.Verify(e => e.Log(
-                expected,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((x, d) => x.ToString() == request.Message),
-                It.IsAny<Exception>(),
-                It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
-        }
+        // Assert
+        _mockLogger.Verify(e => e.Log(
+            expected,
+            It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((x, d) => x.ToString() == request.Message),
+            It.IsAny<Exception>(),
+            It.IsAny<Func<It.IsAnyType, Exception, string>>()), Times.Once);
     }
 }

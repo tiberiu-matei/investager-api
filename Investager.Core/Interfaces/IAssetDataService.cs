@@ -4,16 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Interfaces
+namespace Investager.Core.Interfaces;
+
+public interface IAssetDataService
 {
-    public interface IAssetDataService
-    {
-        string Provider { get; }
+    string Provider { get; }
 
-        TimeSpan DataQueryInterval { get; }
+    TimeSpan DataQueryInterval { get; }
 
-        Task<IEnumerable<Asset>> GetAssets();
+    Task<IEnumerable<Asset>> GetAssets();
 
-        Task<IEnumerable<TimeSeriesPoint>> GetRecentPoints(UpdateAssetDataRequest request);
-    }
+    Task<IEnumerable<TimeSeriesPoint>> GetRecentPoints(UpdateAssetDataRequest request);
 }

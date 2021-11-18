@@ -1,11 +1,10 @@
-﻿namespace Investager.Infrastructure.Models.CoinGecko
+﻿namespace Investager.Infrastructure.Models.CoinGecko;
+
+public class CoinGeckoCoin
 {
-    public class CoinGeckoCoin
-    {
-        public string Id { get; set; }
+    public string Id { get; set; }
 
-        public string Symbol { get; set; }
+    public string Symbol { get; set; }
 
-        public string Name { get; set; }
-    }
+    public string Name { get; set; }
 }

@@ -1,9 +1,8 @@
 ﻿using System;
 
-namespace Investager.Core.Interfaces
+namespace Investager.Core.Interfaces;
+
+public interface ITimeHelper
 {
-    public interface ITimeHelper
-    {
-        DateTime GetUtcNow();
-    }
+    DateTime GetUtcNow();
 }

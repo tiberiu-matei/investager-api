@@ -2,12 +2,11 @@
 using Investager.Core.Models;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Interfaces
-{
-    public interface ITimeSeriesService
-    {
-        Task<TimeSeriesSummary> Get(string key);
+namespace Investager.Core.Interfaces;
 
-        Task<TimeSeriesSummary> Get(CurrencyPair currencyPair);
-    }
+public interface ITimeSeriesService
+{
+    Task<TimeSeriesSummary> Get(string key);
+
+    Task<TimeSeriesSummary> Get(CurrencyPair currencyPair);
 }

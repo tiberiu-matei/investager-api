@@ -1,9 +1,8 @@
 ﻿using Serilog.Events;
 
-namespace Investager.Infrastructure.Logging
+namespace Investager.Infrastructure.Logging;
+
+public interface ILokiFormatter
 {
-    public interface ILokiFormatter
-    {
-        string Format(LogEvent logEvent);
-    }
+    string Format(LogEvent logEvent);
 }

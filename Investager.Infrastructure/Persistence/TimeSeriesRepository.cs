@@ -7,70 +7,69 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Investager.Infrastructure.Persistence
+namespace Investager.Infrastructure.Persistence;
+
+public class TimeSeriesRepository : ITimeSeriesRepository
 {
-    public class TimeSeriesRepository : ITimeSeriesRepository
+    private readonly InvestagerTimeSeriesContext _context;
+    private readonly IDbContextFactory<InvestagerTimeSeriesContext> _contextFactory;
+
+    public TimeSeriesRepository(InvestagerTimeSeriesContext context, IDbContextFactory<InvestagerTimeSeriesContext> contextFactory)
     {
-        private readonly InvestagerTimeSeriesContext _context;
-        private readonly IDbContextFactory<InvestagerTimeSeriesContext> _contextFactory;
+        _context = context;
+        _contextFactory = contextFactory;
+    }
 
-        public TimeSeriesRepository(InvestagerTimeSeriesContext context, IDbContextFactory<InvestagerTimeSeriesContext> contextFactory)
+    public async Task<TimeSeriesResponse> Get(string key)
+    {
+        using var readContext = _contextFactory.CreateDbContext();
+
+        var points = await readContext.TimeSeriesPoints
+            .Where(e => e.Key == key)
+            .Select(e => new TimePointResponse { Time = e.Time, Value = e.Value })
+            .ToListAsync();
+
+        return new TimeSeriesResponse
         {
-            _context = context;
-            _contextFactory = contextFactory;
+            Key = key,
+            Points = points.OrderByDescending(e => e.Time).ToList(),
+        };
+    }
+
+    public async Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints)
+    {
+        if (!timeSeriesPoints.Any())
+        {
+            return;
         }
 
-        public async Task<TimeSeriesResponse> Get(string key)
+        var sqlBuilder = new StringBuilder();
+        sqlBuilder.AppendLine("INSERT INTO \"TimeSeriesPoint\"(\"Time\", \"Key\", \"Value\")");
+        sqlBuilder.AppendLine("VALUES");
+
+        var pointsArray = timeSeriesPoints.ToArray();
+        for (var i = 0; i < pointsArray.Length; i++)
         {
-            using var readContext = _contextFactory.CreateDbContext();
+            sqlBuilder.Append($"('{pointsArray[i].Time:yyyy-MM-dd HH:mm:ss.ffffff}', '{pointsArray[i].Key}', {pointsArray[i].Value})");
 
-            var points = await readContext.TimeSeriesPoints
-                .Where(e => e.Key == key)
-                .Select(e => new TimePointResponse { Time = e.Time, Value = e.Value })
-                .ToListAsync();
-
-            return new TimeSeriesResponse
+            if (i == pointsArray.Length - 1)
             {
-                Key = key,
-                Points = points.OrderByDescending(e => e.Time).ToList(),
-            };
-        }
-
-        public async Task InsertRange(IEnumerable<TimeSeriesPoint> timeSeriesPoints)
-        {
-            if (!timeSeriesPoints.Any())
-            {
-                return;
+                sqlBuilder.AppendLine(";");
             }
-
-            var sqlBuilder = new StringBuilder();
-            sqlBuilder.AppendLine("INSERT INTO \"TimeSeriesPoint\"(\"Time\", \"Key\", \"Value\")");
-            sqlBuilder.AppendLine("VALUES");
-
-            var pointsArray = timeSeriesPoints.ToArray();
-            for (var i = 0; i < pointsArray.Length; i++)
+            else
             {
-                sqlBuilder.Append($"('{pointsArray[i].Time:yyyy-MM-dd HH:mm:ss.ffffff}', '{pointsArray[i].Key}', {pointsArray[i].Value})");
-
-                if (i == pointsArray.Length - 1)
-                {
-                    sqlBuilder.AppendLine(";");
-                }
-                else
-                {
-                    sqlBuilder.AppendLine(",");
-                }
+                sqlBuilder.AppendLine(",");
             }
-
-            await _context.Database.ExecuteSqlRawAsync(sqlBuilder.ToString());
         }
 
-        public async Task DeleteSeries(string key)
-        {
-            var sql = $"DELETE FROM \"TimeSeriesPoint\" WHERE \"Key\" = '{key}'";
-            using var context = _contextFactory.CreateDbContext();
+        await _context.Database.ExecuteSqlRawAsync(sqlBuilder.ToString());
+    }
 
-            await context.Database.ExecuteSqlRawAsync(sql);
-        }
+    public async Task DeleteSeries(string key)
+    {
+        var sql = $"DELETE FROM \"TimeSeriesPoint\" WHERE \"Key\" = '{key}'";
+        using var context = _contextFactory.CreateDbContext();
+
+        await context.Database.ExecuteSqlRawAsync(sql);
     }
 }

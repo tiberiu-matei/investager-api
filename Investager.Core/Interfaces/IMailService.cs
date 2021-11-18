@@ -1,6 +1,5 @@
-﻿namespace Investager.Core.Interfaces
+﻿namespace Investager.Core.Interfaces;
+
+public interface IMailService
 {
-    public interface IMailService
-    {
-    }
 }

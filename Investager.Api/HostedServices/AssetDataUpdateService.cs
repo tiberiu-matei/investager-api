@@ -11,110 +11,109 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Investager.Api.HostedServices
+namespace Investager.Api.HostedServices;
+
+public class AssetDataUpdateService : IHostedService
 {
-    public class AssetDataUpdateService : IHostedService
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ICache _cache;
+    private readonly DataUpdateSettings _dataUpdateSettings;
+    private readonly ILogger<AssetDataUpdateService> _logger;
+
+    public AssetDataUpdateService(
+        IServiceScopeFactory serviceScopeFactory,
+        ICache cache,
+        DataUpdateSettings dataUpdateSettings,
+        ILogger<AssetDataUpdateService> logger)
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ICache _cache;
-        private readonly DataUpdateSettings _dataUpdateSettings;
-        private readonly ILogger<AssetDataUpdateService> _logger;
+        _serviceScopeFactory = serviceScopeFactory;
+        _cache = cache;
+        _dataUpdateSettings = dataUpdateSettings;
+        _logger = logger;
+    }
 
-        public AssetDataUpdateService(
-            IServiceScopeFactory serviceScopeFactory,
-            ICache cache,
-            DataUpdateSettings dataUpdateSettings,
-            ILogger<AssetDataUpdateService> logger)
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        StartDataAcquisitionTasks(cancellationToken);
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void StartDataAcquisitionTasks(CancellationToken cancellationToken)
+    {
+        Task.Run(async () =>
         {
-            _serviceScopeFactory = serviceScopeFactory;
-            _cache = cache;
-            _dataUpdateSettings = dataUpdateSettings;
-            _logger = logger;
-        }
+            using var scope = _serviceScopeFactory.CreateScope();
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            StartDataAcquisitionTasks(cancellationToken);
-
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
-
-        private void StartDataAcquisitionTasks(CancellationToken cancellationToken)
-        {
-            Task.Run(async () =>
+            var assetDataServices = scope.ServiceProvider.GetServices<IAssetDataService>();
+            var tasks = assetDataServices.Select(service =>
             {
-                using var scope = _serviceScopeFactory.CreateScope();
-
-                var assetDataServices = scope.ServiceProvider.GetServices<IAssetDataService>();
-                var tasks = assetDataServices.Select(service =>
-                {
-                    return Task.Run(async () => await UpdateTimeSeries(service, cancellationToken));
-                });
-
-                await Task.WhenAll(tasks);
+                return Task.Run(async () => await UpdateTimeSeries(service, cancellationToken));
             });
-        }
 
-        private async Task UpdateTimeSeries(IAssetDataService dataService, CancellationToken cancellationToken)
+            await Task.WhenAll(tasks);
+        });
+    }
+
+    private async Task UpdateTimeSeries(IAssetDataService dataService, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var assetService = scope.ServiceProvider.GetRequiredService<IAssetService>();
+                var assets = await assetService.GetAssets();
+
+                var assetsToUpdate = assets
+                    .Where(e => e.Provider == dataService.Provider)
+                    .ToList();
+
+                foreach (var assetToUpdate in assetsToUpdate)
                 {
-                    var assetService = scope.ServiceProvider.GetRequiredService<IAssetService>();
-                    var assets = await assetService.GetAssets();
-
-                    var assetsToUpdate = assets
-                        .Where(e => e.Provider == dataService.Provider)
-                        .ToList();
-
-                    foreach (var assetToUpdate in assetsToUpdate)
+                    try
                     {
-                        try
+                        var currentAssets = await assetService.GetAssets();
+                        var asset = currentAssets.Single(e => e.Id == assetToUpdate.Id);
+                        var key = asset.GetKey();
+
+                        var timeSeriesService = scope.ServiceProvider.GetRequiredService<ITimeSeriesService>();
+                        var timeSeries = await timeSeriesService.Get(key);
+                        var latestPointTime = timeSeries.Points.FirstOrDefault()?.Time;
+
+                        var request = new UpdateAssetDataRequest
                         {
-                            var currentAssets = await assetService.GetAssets();
-                            var asset = currentAssets.Single(e => e.Id == assetToUpdate.Id);
-                            var key = asset.GetKey();
+                            Exchange = asset.Exchange,
+                            Symbol = asset.Symbol,
+                            Key = key,
+                            LatestPointTime = latestPointTime,
+                        };
 
-                            var timeSeriesService = scope.ServiceProvider.GetRequiredService<ITimeSeriesService>();
-                            var timeSeries = await timeSeriesService.Get(key);
-                            var latestPointTime = timeSeries.Points.FirstOrDefault()?.Time;
+                        var recentPoints = await dataService.GetRecentPoints(request);
 
-                            var request = new UpdateAssetDataRequest
-                            {
-                                Exchange = asset.Exchange,
-                                Symbol = asset.Symbol,
-                                Key = key,
-                                LatestPointTime = latestPointTime,
-                            };
-
-                            var recentPoints = await dataService.GetRecentPoints(request);
-
-                            if (recentPoints.Any())
-                            {
-                                var timeSeriesRepository = scope.ServiceProvider.GetRequiredService<ITimeSeriesRepository>();
-                                await timeSeriesRepository.InsertRange(recentPoints);
-                                await _cache.Clear(key);
-                            }
-                        }
-                        catch (Exception ex)
+                        if (recentPoints.Any())
                         {
-                            _logger.LogError(ex, "Error updating asset data");
-                        }
-                        finally
-                        {
-                            await Task.Delay(dataService.DataQueryInterval);
+                            var timeSeriesRepository = scope.ServiceProvider.GetRequiredService<ITimeSeriesRepository>();
+                            await timeSeriesRepository.InsertRange(recentPoints);
+                            await _cache.Clear(key);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error updating asset data");
+                    }
+                    finally
+                    {
+                        await Task.Delay(dataService.DataQueryInterval);
+                    }
                 }
-
-                await Task.Delay(_dataUpdateSettings.UpdateInterval);
             }
+
+            await Task.Delay(_dataUpdateSettings.UpdateInterval);
         }
     }
 }

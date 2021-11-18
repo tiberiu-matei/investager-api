@@ -11,36 +11,35 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 
-namespace Investager.Api
+namespace Investager.Api;
+
+public static class SerilogExtensions
 {
-    public static class SerilogExtensions
+    public static LoggerConfiguration Loki(
+        this LoggerSinkConfiguration loggerConfiguration,
+        IConfiguration configuration,
+        LokiSettings lokiSettings)
     {
-        public static LoggerConfiguration Loki(
-            this LoggerSinkConfiguration loggerConfiguration,
-            IConfiguration configuration,
-            LokiSettings lokiSettings)
+        var lokiServices = new ServiceCollection();
+
+        lokiServices.AddHttpClient(HttpClients.Loki, e =>
         {
-            var lokiServices = new ServiceCollection();
+            var section = "Loki";
+            e.BaseAddress = new Uri(configuration.GetSection(section)["BaseUrl"]);
 
-            lokiServices.AddHttpClient(HttpClients.Loki, e =>
-            {
-                var section = "Loki";
-                e.BaseAddress = new Uri(configuration.GetSection(section)["BaseUrl"]);
+            var username = configuration.GetSection(section)["Username"];
+            var password = configuration.GetSection(section)["Password"];
+            var authBytes = Encoding.ASCII.GetBytes($"{username}:{password}");
 
-                var username = configuration.GetSection(section)["Username"];
-                var password = configuration.GetSection(section)["Password"];
-                var authBytes = Encoding.ASCII.GetBytes($"{username}:{password}");
+            e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
+        }).AddPolicyHandler(PollyPolicies.GetRetryPolicy());
 
-                e.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authBytes));
-            }).AddPolicyHandler(PollyPolicies.GetRetryPolicy());
+        var provider = lokiServices.BuildServiceProvider();
 
-            var provider = lokiServices.BuildServiceProvider();
+        var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
 
-            var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+        var formatter = new LokiFormatter();
 
-            var formatter = new LokiFormatter();
-
-            return loggerConfiguration.Sink(new LokiSink(configuration, formatter, httpClientFactory, lokiSettings));
-        }
+        return loggerConfiguration.Sink(new LokiSink(configuration, formatter, httpClientFactory, lokiSettings));
     }
 }

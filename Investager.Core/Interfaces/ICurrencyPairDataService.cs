@@ -4,16 +4,15 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Investager.Core.Interfaces
+namespace Investager.Core.Interfaces;
+
+public interface ICurrencyPairDataService
 {
-    public interface ICurrencyPairDataService
-    {
-        string Provider { get; }
+    string Provider { get; }
 
-        TimeSpan DataQueryInterval { get; }
+    TimeSpan DataQueryInterval { get; }
 
-        Task<IEnumerable<CurrencyPair>> GetPairs();
+    Task<IEnumerable<CurrencyPair>> GetPairs();
 
-        Task<IEnumerable<TimeSeriesPoint>> GetRecentPoints(UpdateCurrencyPairDataRequest request);
-    }
+    Task<IEnumerable<TimeSeriesPoint>> GetRecentPoints(UpdateCurrencyPairDataRequest request);
 }

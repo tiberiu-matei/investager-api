@@ -13,93 +13,92 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Investager.Api.UnitTests.Policies
+namespace Investager.Api.UnitTests.Policies;
+
+public class AuthenticatedUserHandlerUnitTests
 {
-    public class AuthenticatedUserHandlerUnitTests
+    private const string InvalidBearerMessage = "Bearer token not provided or invalid.";
+
+    private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+    private readonly Mock<IJwtTokenService> _mockJwtTokenService = new Mock<IJwtTokenService>();
+    private readonly HttpContext _httpContext = new DefaultHttpContext();
+    private readonly AuthorizationHandlerContext _context;
+
+    private readonly AuthenticatedUserHandler _target;
+
+    public AuthenticatedUserHandlerUnitTests()
     {
-        private const string InvalidBearerMessage = "Bearer token not provided or invalid.";
+        _context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { new AuthenticatedUserRequirement() }, new ClaimsPrincipal(), null);
+        _mockHttpContextAccessor.Setup(e => e.HttpContext).Returns(_httpContext);
 
-        private readonly Mock<IHttpContextAccessor> _mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        private readonly Mock<IJwtTokenService> _mockJwtTokenService = new Mock<IJwtTokenService>();
-        private readonly HttpContext _httpContext = new DefaultHttpContext();
-        private readonly AuthorizationHandlerContext _context;
+        _target = new AuthenticatedUserHandler(_mockHttpContextAccessor.Object, _mockJwtTokenService.Object);
+    }
 
-        private readonly AuthenticatedUserHandler _target;
+    [Fact]
+    public async Task HandleAsync_WhenNoAuthorizationHeader_Throws()
+    {
+        // Act
+        Func<Task> act = async () => await _target.HandleAsync(_context);
 
-        public AuthenticatedUserHandlerUnitTests()
-        {
-            _context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { new AuthenticatedUserRequirement() }, new ClaimsPrincipal(), null);
-            _mockHttpContextAccessor.Setup(e => e.HttpContext).Returns(_httpContext);
+        // Assert
+        await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
+        _context.HasSucceeded.Should().BeFalse();
+    }
 
-            _target = new AuthenticatedUserHandler(_mockHttpContextAccessor.Object, _mockJwtTokenService.Object);
-        }
+    [Fact]
+    public async Task HandleAsync_WhenAuthorizationHeaderInvalid_Throws()
+    {
+        // Arrange
+        _httpContext.Request.Headers.Add("Authorization", "1337");
 
-        [Fact]
-        public async Task HandleAsync_WhenNoAuthorizationHeader_Throws()
-        {
-            // Act
-            Func<Task> act = async () => await _target.HandleAsync(_context);
+        // Act
+        Func<Task> act = async () => await _target.HandleAsync(_context);
 
-            // Assert
-            await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
-            _context.HasSucceeded.Should().BeFalse();
-        }
+        // Assert
+        await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
+        _context.HasSucceeded.Should().BeFalse();
+    }
 
-        [Fact]
-        public async Task HandleAsync_WhenAuthorizationHeaderInvalid_Throws()
-        {
-            // Arrange
-            _httpContext.Request.Headers.Add("Authorization", "1337");
+    [Fact]
+    public async Task HandleAsync_WhenTokenInvalid_Throws()
+    {
+        // Arrange
+        var errorMessage = "Token not valid.";
+        _httpContext.Request.Headers.Add("Authorization", "Bearer 1337");
+        _mockJwtTokenService.Setup(e => e.Validate(It.IsAny<string>())).Throws(new Exception(errorMessage));
 
-            // Act
-            Func<Task> act = async () => await _target.HandleAsync(_context);
+        // Act
+        Func<Task> act = async () => await _target.HandleAsync(_context);
 
-            // Assert
-            await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
-            _context.HasSucceeded.Should().BeFalse();
-        }
+        // Assert
+        await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
+        _context.HasSucceeded.Should().BeFalse();
+    }
 
-        [Fact]
-        public async Task HandleAsync_WhenTokenInvalid_Throws()
-        {
-            // Arrange
-            var errorMessage = "Token not valid.";
-            _httpContext.Request.Headers.Add("Authorization", "Bearer 1337");
-            _mockJwtTokenService.Setup(e => e.Validate(It.IsAny<string>())).Throws(new Exception(errorMessage));
+    [Fact]
+    public async Task HandleAsync_WhenTokenValid_PopulatesItemsDictionary()
+    {
+        // Arrange
+        var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNSIsImp0aSI6I" +
+            "jZhZDZlODBjLWMxMmItNGQ1NS05MTNjLTkwZjgzMjMxZDQyYSIsImV4cCI6MTYyMTcxNjQ" +
+            "5MiwiaXNzIjoiaW52ZXN0YWdlciJ9.TYO6Ea4it_jnKB3RioSyVdxt4MfcPE4faiV9e6qHbx4";
 
-            // Act
-            Func<Task> act = async () => await _target.HandleAsync(_context);
+        _httpContext.Request.Headers.Add("Authorization", $"Bearer {token}");
+        _mockJwtTokenService.Setup(e => e.Validate(It.IsAny<string>())).Returns(DecodeToken(token));
 
-            // Assert
-            await act.Should().ThrowAsync<InvalidBearerTokenException>().WithMessage(InvalidBearerMessage);
-            _context.HasSucceeded.Should().BeFalse();
-        }
+        // Act
+        await _target.HandleAsync(_context);
 
-        [Fact]
-        public async Task HandleAsync_WhenTokenValid_PopulatesItemsDictionary()
-        {
-            // Arrange
-            var token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxNSIsImp0aSI6I" +
-                "jZhZDZlODBjLWMxMmItNGQ1NS05MTNjLTkwZjgzMjMxZDQyYSIsImV4cCI6MTYyMTcxNjQ" +
-                "5MiwiaXNzIjoiaW52ZXN0YWdlciJ9.TYO6Ea4it_jnKB3RioSyVdxt4MfcPE4faiV9e6qHbx4";
+        // Assert
+        _httpContext.Items[HttpContextKeys.UserId].Should().Be("15");
+        _context.HasSucceeded.Should().BeTrue();
+    }
 
-            _httpContext.Request.Headers.Add("Authorization", $"Bearer {token}");
-            _mockJwtTokenService.Setup(e => e.Validate(It.IsAny<string>())).Returns(DecodeToken(token));
+    public JwtSecurityToken DecodeToken(string encodedToken)
+    {
+        var handler = new JwtSecurityTokenHandler();
+        var jsonToken = handler.ReadToken(encodedToken);
 
-            // Act
-            await _target.HandleAsync(_context);
-
-            // Assert
-            _httpContext.Items[HttpContextKeys.UserId].Should().Be("15");
-            _context.HasSucceeded.Should().BeTrue();
-        }
-
-        public JwtSecurityToken DecodeToken(string encodedToken)
-        {
-            var handler = new JwtSecurityTokenHandler();
-            var jsonToken = handler.ReadToken(encodedToken);
-
-            return jsonToken as JwtSecurityToken;
-        }
+        return jsonToken as JwtSecurityToken;
     }
 }

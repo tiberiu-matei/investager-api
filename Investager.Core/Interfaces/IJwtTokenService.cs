@@ -1,13 +1,12 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 
-namespace Investager.Core.Interfaces
+namespace Investager.Core.Interfaces;
+
+public interface IJwtTokenService
 {
-    public interface IJwtTokenService
-    {
-        string GetAccessToken(int userId);
+    string GetAccessToken(int userId);
 
-        string GetRefreshToken(int userId);
+    string GetRefreshToken(int userId);
 
-        JwtSecurityToken Validate(string token);
-    }
+    JwtSecurityToken Validate(string token);
 }

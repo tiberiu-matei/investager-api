@@ -11,110 +11,109 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Investager.Api.HostedServices
+namespace Investager.Api.HostedServices;
+
+public class CurrencyPairDataUpdateService : IHostedService
 {
-    public class CurrencyPairDataUpdateService : IHostedService
+    private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ICache _cache;
+    private readonly DataUpdateSettings _dataUpdateSettings;
+    private readonly ILogger<CurrencyPairDataUpdateService> _logger;
+
+    public CurrencyPairDataUpdateService(
+        IServiceScopeFactory serviceScopeFactory,
+        ICache cache,
+        DataUpdateSettings dataUpdateSettings,
+        ILogger<CurrencyPairDataUpdateService> logger)
     {
-        private readonly IServiceScopeFactory _serviceScopeFactory;
-        private readonly ICache _cache;
-        private readonly DataUpdateSettings _dataUpdateSettings;
-        private readonly ILogger<CurrencyPairDataUpdateService> _logger;
+        _serviceScopeFactory = serviceScopeFactory;
+        _cache = cache;
+        _dataUpdateSettings = dataUpdateSettings;
+        _logger = logger;
+    }
 
-        public CurrencyPairDataUpdateService(
-            IServiceScopeFactory serviceScopeFactory,
-            ICache cache,
-            DataUpdateSettings dataUpdateSettings,
-            ILogger<CurrencyPairDataUpdateService> logger)
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        StartDataAcquisitionTasks(cancellationToken);
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private void StartDataAcquisitionTasks(CancellationToken cancellationToken)
+    {
+        Task.Run(async () =>
         {
-            _serviceScopeFactory = serviceScopeFactory;
-            _cache = cache;
-            _dataUpdateSettings = dataUpdateSettings;
-            _logger = logger;
-        }
+            using var scope = _serviceScopeFactory.CreateScope();
 
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            StartDataAcquisitionTasks(cancellationToken);
-
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
-
-        private void StartDataAcquisitionTasks(CancellationToken cancellationToken)
-        {
-            Task.Run(async () =>
+            var currencyPairDataServices = scope.ServiceProvider.GetServices<ICurrencyPairDataService>();
+            var tasks = currencyPairDataServices.Select(service =>
             {
-                using var scope = _serviceScopeFactory.CreateScope();
-
-                var currencyPairDataServices = scope.ServiceProvider.GetServices<ICurrencyPairDataService>();
-                var tasks = currencyPairDataServices.Select(service =>
-                {
-                    return Task.Run(async () => await UpdateTimeSeries(service, cancellationToken));
-                });
-
-                await Task.WhenAll(tasks);
+                return Task.Run(async () => await UpdateTimeSeries(service, cancellationToken));
             });
-        }
 
-        private async Task UpdateTimeSeries(ICurrencyPairDataService dataService, CancellationToken cancellationToken)
+            await Task.WhenAll(tasks);
+        });
+    }
+
+    private async Task UpdateTimeSeries(ICurrencyPairDataService dataService, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            using (var scope = _serviceScopeFactory.CreateScope())
             {
-                using (var scope = _serviceScopeFactory.CreateScope())
+                var currencyService = scope.ServiceProvider.GetRequiredService<ICurrencyService>();
+                var pairs = await currencyService.GetPairs();
+
+                var pairsToUpdate = pairs
+                    .Where(e => e.Provider == dataService.Provider && e.HasTimeData)
+                    .ToList();
+
+                foreach (var pairToUpdate in pairsToUpdate)
                 {
-                    var currencyService = scope.ServiceProvider.GetRequiredService<ICurrencyService>();
-                    var pairs = await currencyService.GetPairs();
-
-                    var pairsToUpdate = pairs
-                        .Where(e => e.Provider == dataService.Provider && e.HasTimeData)
-                        .ToList();
-
-                    foreach (var pairToUpdate in pairsToUpdate)
+                    try
                     {
-                        try
+                        var currentPairs = await currencyService.GetPairs();
+                        var pair = currentPairs.Single(e => e.GetKey() == pairToUpdate.GetKey());
+                        var key = pair.GetKey();
+
+                        var timeSeriesService = scope.ServiceProvider.GetRequiredService<ITimeSeriesService>();
+                        var timeSeries = await timeSeriesService.Get(key);
+                        var latestPointTime = timeSeries.Points.FirstOrDefault()?.Time;
+
+                        var request = new UpdateCurrencyPairDataRequest
                         {
-                            var currentPairs = await currencyService.GetPairs();
-                            var pair = currentPairs.Single(e => e.GetKey() == pairToUpdate.GetKey());
-                            var key = pair.GetKey();
+                            FirstCurrencyProviderId = pair.FirstCurrency.ProviderId,
+                            SecondCurrencyProviderId = pair.SecondCurrency.ProviderId,
+                            Key = key,
+                            LatestPointTime = latestPointTime,
+                        };
 
-                            var timeSeriesService = scope.ServiceProvider.GetRequiredService<ITimeSeriesService>();
-                            var timeSeries = await timeSeriesService.Get(key);
-                            var latestPointTime = timeSeries.Points.FirstOrDefault()?.Time;
+                        var recentPoints = await dataService.GetRecentPoints(request);
 
-                            var request = new UpdateCurrencyPairDataRequest
-                            {
-                                FirstCurrencyProviderId = pair.FirstCurrency.ProviderId,
-                                SecondCurrencyProviderId = pair.SecondCurrency.ProviderId,
-                                Key = key,
-                                LatestPointTime = latestPointTime,
-                            };
-
-                            var recentPoints = await dataService.GetRecentPoints(request);
-
-                            if (recentPoints.Any())
-                            {
-                                var timeSeriesRepository = scope.ServiceProvider.GetRequiredService<ITimeSeriesRepository>();
-                                await timeSeriesRepository.InsertRange(recentPoints);
-                                await _cache.Clear(key);
-                            }
-                        }
-                        catch (Exception ex)
+                        if (recentPoints.Any())
                         {
-                            _logger.LogError(ex, "Error updating currency pair data");
-                        }
-                        finally
-                        {
-                            await Task.Delay(dataService.DataQueryInterval);
+                            var timeSeriesRepository = scope.ServiceProvider.GetRequiredService<ITimeSeriesRepository>();
+                            await timeSeriesRepository.InsertRange(recentPoints);
+                            await _cache.Clear(key);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error updating currency pair data");
+                    }
+                    finally
+                    {
+                        await Task.Delay(dataService.DataQueryInterval);
+                    }
                 }
-
-                await Task.Delay(_dataUpdateSettings.UpdateInterval);
             }
+
+            await Task.Delay(_dataUpdateSettings.UpdateInterval);
         }
     }
 }

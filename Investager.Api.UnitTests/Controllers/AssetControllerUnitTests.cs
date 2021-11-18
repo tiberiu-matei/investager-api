@@ -8,30 +8,30 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Investager.Api.UnitTests.Controllers
+namespace Investager.Api.UnitTests.Controllers;
+
+public class AssetControllerUnitTests
 {
-    public class AssetControllerUnitTests
+    private readonly Mock<IAssetService> _mockAssetService = new Mock<IAssetService>();
+    private readonly HttpContext _httpContext = new DefaultHttpContext();
+
+    private readonly AssetController _target;
+
+    public AssetControllerUnitTests()
     {
-        private readonly Mock<IAssetService> _mockAssetService = new Mock<IAssetService>();
-        private readonly HttpContext _httpContext = new DefaultHttpContext();
+        _target = new AssetController(
+            _mockAssetService.Object);
 
-        private readonly AssetController _target;
+        _target.ControllerContext.HttpContext = _httpContext;
+    }
 
-        public AssetControllerUnitTests()
+    [Fact]
+    public async Task Search_ReturnsExpectedData()
+    {
+        // Arrange
+        var assetSearchResponse = new AssetSearchResponse
         {
-            _target = new AssetController(
-                _mockAssetService.Object);
-
-            _target.ControllerContext.HttpContext = _httpContext;
-        }
-
-        [Fact]
-        public async Task Search_ReturnsExpectedData()
-        {
-            // Arrange
-            var assetSearchResponse = new AssetSearchResponse
-            {
-                Assets = new List<AssetSummaryDto>
+            Assets = new List<AssetSummaryDto>
                 {
                     new AssetSummaryDto
                     {
@@ -40,23 +40,22 @@ namespace Investager.Api.UnitTests.Controllers
                         Name = "Nvidia",
                     },
                 },
-                MoreRecordsAvailable = true,
-            };
+            MoreRecordsAvailable = true,
+        };
 
-            var searchText = "abc";
-            var max = 11;
+        var searchText = "abc";
+        var max = 11;
 
-            _mockAssetService
-                .Setup(e => e.Search(It.IsAny<string>(), It.IsAny<int>()))
-                .ReturnsAsync(assetSearchResponse);
+        _mockAssetService
+            .Setup(e => e.Search(It.IsAny<string>(), It.IsAny<int>()))
+            .ReturnsAsync(assetSearchResponse);
 
-            // Act
-            var response = await _target.Search(searchText, max);
+        // Act
+        var response = await _target.Search(searchText, max);
 
-            // Assert
-            response.Value.Should().Be(assetSearchResponse);
+        // Assert
+        response.Value.Should().Be(assetSearchResponse);
 
-            _mockAssetService.Verify(e => e.Search(searchText, max), Times.Once);
-        }
+        _mockAssetService.Verify(e => e.Search(searchText, max), Times.Once);
     }
 }

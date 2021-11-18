@@ -1,7 +1,6 @@
-﻿namespace Investager.Core.Dtos
+﻿namespace Investager.Core.Dtos;
+
+public class AccessTokenDto
 {
-    public class AccessTokenDto
-    {
-        public string AccessToken { get; set; }
-    }
+    public string AccessToken { get; set; }
 }

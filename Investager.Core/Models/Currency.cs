@@ -1,15 +1,14 @@
-﻿namespace Investager.Core.Models
+﻿namespace Investager.Core.Models;
+
+public class Currency
 {
-    public class Currency
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        public string Code { get; set; }
+    public string Code { get; set; }
 
-        public string Name { get; set; }
+    public string Name { get; set; }
 
-        public CurrencyType Type { get; set; }
+    public CurrencyType Type { get; set; }
 
-        public string ProviderId { get; set; }
-    }
+    public string ProviderId { get; set; }
 }
