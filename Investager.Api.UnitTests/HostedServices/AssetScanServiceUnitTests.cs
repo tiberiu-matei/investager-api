@@ -91,7 +91,7 @@ public class AssetScanServiceUnitTests
             .Setup(e => e.GetAssets())
             .ReturnsAsync(new List<Asset>());
 
-        var scanIntervalMs = 200;
+        var scanIntervalMs = 300;
         _dataScanSettings.ScanInterval = TimeSpan.FromMilliseconds(scanIntervalMs);
 
         // Act
