@@ -76,7 +76,7 @@ public class LokiSinkUniTests
 
         // Act
         _target.Emit(logEvent);
-        await Task.Delay(300);
+        await Task.Delay(400);
 
         // Assert
         var expectedRequest = new LokiRequest

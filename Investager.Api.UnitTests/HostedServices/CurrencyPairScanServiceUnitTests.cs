@@ -110,7 +110,7 @@ public class CurrencyPairScanServiceUnitTests
             .Setup(e => e.GetPairs())
             .ReturnsAsync(new List<CurrencyPair>());
 
-        var scanIntervalMs = 200;
+        var scanIntervalMs = 300;
         _dataScanSettings.ScanInterval = TimeSpan.FromMilliseconds(scanIntervalMs);
 
         // Act
