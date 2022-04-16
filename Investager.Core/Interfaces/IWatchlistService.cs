@@ -10,11 +10,11 @@ public interface IWatchlistService
 
     Task<WatchlistResponse> GetById(int userId, int watchlistId);
 
-    Task Add(AddWatchlistRequest addWatchlistRequest);
+    Task Add(AddWatchlistRequest request);
 
-    Task WatchAsset(WatchAssetRequest watchAssetRequest);
+    Task WatchAsset(WatchAssetRequest request);
 
-    Task WatchCurrencyPair(WatchCurrencyPairRequest watchCurrencyPairRequest);
+    Task WatchCurrencyPair(WatchCurrencyPairRequest request);
 
     Task UpdateDisplayOrder(int userId, int watchlistId, int displayOrder);
 
@@ -22,7 +22,7 @@ public interface IWatchlistService
 
     Task UnwatchAsset(int userId, int watchlistId, int assetId);
 
-    Task UnwatchCurrencyPair(int userId, int watchlistId, int currencyPairId);
+    Task UnwatchCurrencyPair(UnwatchCurrencyPairRequest request);
 
     Task Delete(int userId, int watchlistId);
 }

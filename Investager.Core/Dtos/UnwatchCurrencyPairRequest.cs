@@ -1,6 +1,6 @@
 ﻿namespace Investager.Core.Dtos;
 
-public class WatchCurrencyPairRequest
+public class UnwatchCurrencyPairRequest
 {
     public int UserId { get; set; }
 
@@ -9,6 +9,4 @@ public class WatchCurrencyPairRequest
     public int FirstCurrencyId { get; set; }
 
     public int SecondCurrencyId { get; set; }
-
-    public int DisplayOrder { get; set; }
 }

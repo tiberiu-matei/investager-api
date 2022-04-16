@@ -75,12 +75,12 @@ public class WatchlistService : IWatchlistService
         };
     }
 
-    public async Task Add(AddWatchlistRequest addWatchlistRequest)
+    public async Task Add(AddWatchlistRequest request)
     {
         var watchlist = new Watchlist
         {
-            Name = addWatchlistRequest.WatchlistName,
-            UserId = addWatchlistRequest.UserId,
+            Name = request.WatchlistName,
+            UserId = request.UserId,
         };
 
         _unitOfWork.Watchlists.Add(watchlist);
@@ -88,30 +88,31 @@ public class WatchlistService : IWatchlistService
         await _unitOfWork.SaveChanges();
     }
 
-    public async Task WatchAsset(WatchAssetRequest watchAssetRequest)
+    public async Task WatchAsset(WatchAssetRequest request)
     {
-        await VerifyWatchlistOwnership(watchAssetRequest.UserId, watchAssetRequest.WatchlistId);
+        await VerifyWatchlistOwnership(request.UserId, request.WatchlistId);
 
         var watchlistAsset = new WatchlistAsset
         {
-            WatchlistId = watchAssetRequest.WatchlistId,
-            AssetId = watchAssetRequest.AssetId,
-            DisplayOrder = watchAssetRequest.DisplayOrder,
+            WatchlistId = request.WatchlistId,
+            AssetId = request.AssetId,
+            DisplayOrder = request.DisplayOrder,
         };
 
         _unitOfWork.WatchlistAssets.Add(watchlistAsset);
         await _unitOfWork.SaveChanges();
     }
 
-    public async Task WatchCurrencyPair(WatchCurrencyPairRequest watchCurrencyPairRequest)
+    public async Task WatchCurrencyPair(WatchCurrencyPairRequest request)
     {
-        await VerifyWatchlistOwnership(watchCurrencyPairRequest.UserId, watchCurrencyPairRequest.WatchlistId);
+        await VerifyWatchlistOwnership(request.UserId, request.WatchlistId);
 
         var watchlistCurrencyPair = new WatchlistCurrencyPair
         {
-            WatchlistId = watchCurrencyPairRequest.WatchlistId,
-            CurrencyPairId = watchCurrencyPairRequest.CurrencyPairId,
-            DisplayOrder = watchCurrencyPairRequest.DisplayOrder,
+            WatchlistId = request.WatchlistId,
+            FirstCurrencyId = request.FirstCurrencyId,
+            SecondCurrencyId = request.SecondCurrencyId,
+            DisplayOrder = request.DisplayOrder,
         };
 
         _unitOfWork.WatchlistCurrencyPairs.Add(watchlistCurrencyPair);
@@ -150,12 +151,14 @@ public class WatchlistService : IWatchlistService
         await _unitOfWork.SaveChanges();
     }
 
-    public async Task UnwatchCurrencyPair(int userId, int watchlistId, int currencyPairId)
+    public async Task UnwatchCurrencyPair(UnwatchCurrencyPairRequest request)
     {
-        await VerifyWatchlistOwnership(userId, watchlistId);
+        await VerifyWatchlistOwnership(request.UserId, request.WatchlistId);
 
         _unitOfWork.WatchlistCurrencyPairs
-            .Delete(e => e.WatchlistId == watchlistId && e.CurrencyPairId == currencyPairId);
+            .Delete(e => e.WatchlistId == request.WatchlistId
+                && e.FirstCurrencyId == request.FirstCurrencyId
+                && e.SecondCurrencyId == request.SecondCurrencyId);
 
         await _unitOfWork.SaveChanges();
     }

@@ -6,7 +6,9 @@ public class WatchlistCurrencyPair
 
     public Watchlist Watchlist { get; set; }
 
-    public int CurrencyPairId { get; set; }
+    public int FirstCurrencyId { get; set; }
+
+    public int SecondCurrencyId { get; set; }
 
     public CurrencyPair CurrencyPair { get; set; }
 

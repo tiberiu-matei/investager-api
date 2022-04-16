@@ -135,14 +135,15 @@ public class WatchlistControllerUnitTests
         var userId = 385;
         _httpContext.Items[HttpContextKeys.UserId] = userId.ToString();
         var watchlistId = 104;
-        var currencyPairId = 139;
+        var firstCurrencyId = 139;
+        var secondCurrencyId = 601;
         var body = new DisplayOrderBody
         {
             DisplayOrder = 601,
         };
 
         // Act
-        var response = await _target.WatchCurrencyPair(watchlistId, currencyPairId, body);
+        var response = await _target.WatchCurrencyPair(watchlistId, firstCurrencyId, secondCurrencyId, body);
 
         // Assert
         var result = response as NoContentResult;
@@ -151,7 +152,8 @@ public class WatchlistControllerUnitTests
         _mockWatchlistService.Verify(
             e => e.WatchCurrencyPair(It.Is<WatchCurrencyPairRequest>(e => e.UserId == userId
                 && e.WatchlistId == watchlistId
-                && e.CurrencyPairId == currencyPairId
+                && e.FirstCurrencyId == firstCurrencyId
+                && e.SecondCurrencyId == secondCurrencyId
                 && e.DisplayOrder == body.DisplayOrder)),
             Times.Once);
     }
@@ -232,17 +234,21 @@ public class WatchlistControllerUnitTests
         var userId = 385;
         _httpContext.Items[HttpContextKeys.UserId] = userId.ToString();
         var watchlistId = 104;
-        var currencyPairId = 601;
+        var firstCurrencyId = 601;
+        var secondCurrencyId = 139;
 
         // Act
-        var response = await _target.UnwatchCurrencyPair(watchlistId, currencyPairId);
+        var response = await _target.UnwatchCurrencyPair(watchlistId, firstCurrencyId, secondCurrencyId);
 
         // Assert
         var result = response as NoContentResult;
         result.StatusCode.Should().Be(204);
 
         _mockWatchlistService.Verify(
-            e => e.UnwatchCurrencyPair(userId, watchlistId, currencyPairId),
+            e => e.UnwatchCurrencyPair(It.Is<UnwatchCurrencyPairRequest>(e => e.UserId == userId
+                && e.WatchlistId == watchlistId
+                && e.FirstCurrencyId == firstCurrencyId
+                && e.SecondCurrencyId == secondCurrencyId)),
             Times.Once);
     }
 

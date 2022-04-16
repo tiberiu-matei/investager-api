@@ -1,5 +1,5 @@
-# VS
-.vs/
+.vs
+.vscode
 
 # User-specific files
 *.rsuser

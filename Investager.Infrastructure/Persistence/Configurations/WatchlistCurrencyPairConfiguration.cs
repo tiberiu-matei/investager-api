@@ -8,7 +8,7 @@ public class WatchlistCurrencyPairConfiguration : IEntityTypeConfiguration<Watch
 {
     public void Configure(EntityTypeBuilder<WatchlistCurrencyPair> builder)
     {
-        builder.HasKey(e => new { e.WatchlistId, e.CurrencyPairId });
+        builder.HasKey(e => new { e.WatchlistId, e.FirstCurrencyId, e.SecondCurrencyId });
 
         builder.Property(e => e.DisplayOrder).IsRequired();
     }

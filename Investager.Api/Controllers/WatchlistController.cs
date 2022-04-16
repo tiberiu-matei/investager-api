@@ -56,15 +56,16 @@ public class WatchlistController : ControllerBase
         return NoContent();
     }
 
-    [HttpPost("{watchlistId}/currencypair/{currencyPairId}/watch")]
-    public async Task<IActionResult> WatchCurrencyPair(int watchlistId, int currencyPairId, [FromBody] DisplayOrderBody body)
+    [HttpPost("{watchlistId}/currencypair/{firstCurrencyId}/{secondCurrencyId}/watch")]
+    public async Task<IActionResult> WatchCurrencyPair(int watchlistId, int firstCurrencyId, int secondCurrencyId, [FromBody] DisplayOrderBody body)
     {
         var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
         var request = new WatchCurrencyPairRequest
         {
             UserId = userId,
             WatchlistId = watchlistId,
-            CurrencyPairId = currencyPairId,
+            FirstCurrencyId = firstCurrencyId,
+            SecondCurrencyId = secondCurrencyId,
             DisplayOrder = body.DisplayOrder,
         };
 
@@ -103,12 +104,20 @@ public class WatchlistController : ControllerBase
         return NoContent();
     }
 
-    [HttpDelete("{watchlistId}/currencypair/{currencyPairId}/unwatch")]
-    public async Task<IActionResult> UnwatchCurrencyPair(int watchlistId, int currencyPairId)
+    [HttpDelete("{watchlistId}/currencypair/{firstCurrencyId}/{secondCurrencyId}/unwatch")]
+    public async Task<IActionResult> UnwatchCurrencyPair(int watchlistId, int firstCurrencyId, int secondCurrencyId)
     {
         var userId = int.Parse(HttpContext.Items[HttpContextKeys.UserId] as string);
 
-        await _watchlistService.UnwatchCurrencyPair(userId, watchlistId, currencyPairId);
+        var request = new UnwatchCurrencyPairRequest
+        {
+            UserId = userId,
+            WatchlistId = watchlistId,
+            FirstCurrencyId = firstCurrencyId,
+            SecondCurrencyId = secondCurrencyId,
+        };
+
+        await _watchlistService.UnwatchCurrencyPair(request);
 
         return NoContent();
     }
